@@ -22,5 +22,5 @@ jobs:
       - name: Build execution environment
         run: |
           ansible-builder build \
-            --file "Execution Environment/execution-environment.yml" \
+            --file "Execution_Environment/execution-environment.yml" \
             --tag aap-demo-ee:latest
