@@ -2,4 +2,4 @@
 version: 3
 
 dependencies:
-  galaxy: collections/requirements.yml
+  galaxy: Collections/requirements.yml
