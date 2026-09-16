@@ -32,8 +32,15 @@ jobs:
         run: |
           ansible-builder build \
             --file "Execution_Environment/execution-environment.yml" \
-            --tag ghcr.io/${{ github.repository_owner }}/aap-demo-ee:latest
+            --tag aap-demo-ee:latest
+
+      - name: Tag execution environment for GHCR
+        run: |
+          docker tag \
+            aap-demo-ee:latest \
+            ghcr.io/${{ github.repository_owner }}/aap-demo-ee:latest
 
       - name: Push execution environment
         run: |
-          docker push ghcr.io/${{ github.repository_owner }}/aap-demo-ee:latest
+          docker push \
+            ghcr.io/${{ github.repository_owner }}/aap-demo-ee:latest
