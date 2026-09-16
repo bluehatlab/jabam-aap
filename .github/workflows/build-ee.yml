@@ -1,0 +1,26 @@
+# workflow document
+
+name: Build Ansible Execution Environment
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-ee:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install ansible-builder
+        run: |
+          python3 -m pip install ansible-builder
+
+      - name: Build execution environment
+        run: |
+          ansible-builder build \
+            --file execution-environment.yml \
+            --tag aap-demo-ee:latest
