@@ -1,0 +1,68 @@
+---
+- name: Configure Windows
+  hosts: windows
+  gather_facts: true
+
+  tasks:
+
+    - name: Show hostname
+      ansible.builtin.debug:
+        var: ansible_hostname
+
+    - name: Show operating system
+      ansible.builtin.debug:
+        var: ansible_distribution
+
+    - name: Install Chocolatey
+      ansible.windows.win_shell: |
+        Set-ExecutionPolicy Bypass -Scope Process -Force
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+        iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+      args:
+        executable: powershell.exe
+      register: chocolatey_install
+      changed_when: true
+
+    - name: Install Apache
+      chocolatey.chocolatey.win_chocolatey:
+        name: apache-httpd
+        state: present
+
+    - name: Start Apache
+      ansible.windows.win_service:
+        name: Apache2.4
+        state: started
+        start_mode: auto
+
+    - name: Verify Apache service
+      ansible.windows.win_service:
+        name: Apache2.4
+      register: apache_service
+
+    - name: Get EC2 metadata token
+      ansible.builtin.uri:
+        url: http://169.254.169.254/latest/api/token
+        method: PUT
+        headers:
+          X-aws-ec2-metadata-token-ttl-seconds: "21600"
+        return_content: true
+      register: ec2_metadata_token
+
+    - name: Get EC2 public IPv4
+      ansible.builtin.uri:
+        url: http://169.254.169.254/latest/meta-data/public-ipv4
+        method: GET
+        headers:
+          X-aws-ec2-metadata-token: "{{ ec2_metadata_token.content }}"
+        return_content: true
+      register: ec2_public_ip
+
+    - name: Display server information
+      ansible.builtin.debug:
+        msg:
+          - "OS: {{ ansible_distribution }}"
+          - "Version: {{ ansible_distribution_version }}"
+          - "Hostname: {{ ansible_hostname }}"
+          - "Private IP: {{ ansible_default_ipv4.address }}"
+          - "Public IPv4: {{ ec2_public_ip.content }}"
+          - "Apache: {{ apache_service.state }}"

@@ -1,0 +1,43 @@
+---
+- name: Configure RHEL
+  hosts: rhel
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Show hostname
+      ansible.builtin.debug:
+        var: ansible_hostname
+
+    - name: Show operating system
+      ansible.builtin.debug:
+        var: ansible_distribution
+    - name: Install Apache
+      ansible.builtin.dnf:
+        name: httpd
+        state: present
+
+    - name: Start and enable Apache
+      ansible.builtin.service:
+        name: httpd
+        state: started
+        enabled: true
+
+    - name: Verify Apache is running
+      ansible.builtin.service_facts:
+
+    - name: Get EC2 public IPv4
+      ansible.builtin.uri:
+        url: http://169.254.169.254/latest/meta-data/public-ipv4
+        return_content: true
+      register: ec2_public_ip  
+
+    - name: Display RHEL information
+      ansible.builtin.debug:
+        msg:
+          - "OS: {{ ansible_distribution }}"
+          - "Version: {{ ansible_distribution_version }}"
+          - "Hostname: {{ ansible_hostname }}"
+          - "Private IP: {{ ansible_default_ipv4.address }}"
+          - "Public IPv4: {{ ec2_public_ip.content }}"
+          - "Apache: {{ ansible_facts.services['httpd.service'].state }}"

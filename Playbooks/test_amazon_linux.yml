@@ -1,0 +1,13 @@
+---
+- name: Test Amazon Linux connection
+  hosts: amazon_linux
+  gather_facts: true
+
+  tasks:
+    - name: Show hostname
+      ansible.builtin.debug:
+        var: ansible_hostname
+
+    - name: Show operating system
+      ansible.builtin.debug:
+        var: ansible_distribution
