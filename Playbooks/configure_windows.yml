@@ -42,7 +42,7 @@
         var: choco_version.stdout
 
     - name: List installed Chocolatey packages
-      ansible.windows.win_command: choco list --local-only
+      ansible.windows.win_command: choco list
       register: choco_packages
       changed_when: false
 
