@@ -32,6 +32,15 @@
       args:
         executable: powershell.exe    
 
+    - name: Check whether Chocolatey is installed
+      ansible.windows.win_command: choco --version
+      register: choco_version
+      changed_when: false
+
+    - name: Display Chocolatey version
+      ansible.builtin.debug:
+        var: choco_version.stdout
+
     # - name: Install Chocolatey
     #   ansible.windows.win_shell: |
     #     Set-ExecutionPolicy Bypass -Scope Process -Force
