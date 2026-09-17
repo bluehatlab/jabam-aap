@@ -3,6 +3,10 @@
   hosts: windows
   gather_facts: true
 
+  become: true
+  become_method: runas
+  become_user: Administrator
+
   tasks:
 
     - name: Show hostname
