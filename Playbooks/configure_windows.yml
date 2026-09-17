@@ -25,6 +25,13 @@
       ansible.builtin.debug:
         var: windows_identity
 
+    - name: Test PowerShell process creation
+      ansible.windows.win_shell: |
+        $p = Start-Process -FilePath "cmd.exe" -ArgumentList "/c echo PROCESS_TEST" -Wait -PassThru
+        Write-Output "ExitCode: $($p.ExitCode)"
+      args:
+        executable: powershell.exe    
+
     # - name: Install Chocolatey
     #   ansible.windows.win_shell: |
     #     Set-ExecutionPolicy Bypass -Scope Process -Force
