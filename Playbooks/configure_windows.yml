@@ -16,11 +16,10 @@
     - name: Show operating system
       ansible.builtin.debug:
         var: ansible_distribution
-
    
     - name: Show Ansible Windows user
       ansible.windows.win_whoami:
-        register: windows_identity
+      register: windows_identity
 
     - name: Display Windows identity
       ansible.builtin.debug:
