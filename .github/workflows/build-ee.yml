@@ -1,5 +1,4 @@
 name: Build Ansible Execution Environment
-
 on:
   push:
     branches:
