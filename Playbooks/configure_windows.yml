@@ -17,11 +17,15 @@
       ansible.builtin.debug:
         var: ansible_distribution
 
-    - name: Install Chocolatey
-      ansible.windows.win_shell: |
-        Set-ExecutionPolicy Bypass -Scope Process -Force
-        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-        iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+   
+    - name: Show Ansible Windows user
+      ansible.windows.win_whoami:
+
+    # - name: Install Chocolatey
+    #   ansible.windows.win_shell: |
+    #     Set-ExecutionPolicy Bypass -Scope Process -Force
+    #     [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+    #     iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
       args:
         executable: powershell.exe
       register: chocolatey_install
