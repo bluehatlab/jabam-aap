@@ -1,0 +1,39 @@
+name: Build Ansible Execution Environment
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-ee:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install ansible-builder
+        run: |
+          python3 -m pip install ansible-builder
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build execution environment
+        run: |
+          ansible-builder build \
+            --container-runtime docker \
+            --file "Execution_Environment/execution-environment.yml" \
+            --tag ghcr.io/${{ github.repository_owner }}/aap-demo-ee:latest
+
+      - name: Push execution environment
+        run: |
+          docker push ghcr.io/${{ github.repository_owner }}/aap-demo-ee:latest
