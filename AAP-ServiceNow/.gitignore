@@ -1,0 +1,12 @@
+# Secrets
+*.pem
+*.key
+.env
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# macOS
+.DS_Store
