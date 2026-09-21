@@ -1,0 +1,74 @@
+---
+- name: Provision Expand Energy RHEL server
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    aws_region: us-east-1
+    subnet_id: subnet-0829c264522d16ed4
+    security_group_id: sg-06832c04a4e4b34d3
+    key_pair_name: expand-energy-rhel-key-pair
+
+  tasks:
+
+    - name: Find latest RHEL 9 AMI
+      amazon.aws.aws_ami_info:
+        region: "{{ aws_region }}"
+        owners:
+          - "309956199498"
+        filters:
+          name: "RHEL-9*HVM*x86_64*"
+          state: available
+          architecture: x86_64
+          root-device-type: ebs
+          virtualization-type: hvm
+      register: rhel_amis
+
+    - name: Select newest RHEL 9 AMI
+      ansible.builtin.set_fact:
+        rhel_ami_id: >-
+          {{
+            rhel_amis.images
+            | sort(attribute='creation_date')
+            | last
+            | default({})
+            | dict2items
+            | selectattr('key', 'equalto', 'image_id')
+            | map(attribute='value')
+            | first
+          }}
+
+    - name: Display selected AMI
+      ansible.builtin.debug:
+        msg: "Selected RHEL AMI: {{ rhel_ami_id }}"
+
+    - name: Launch expand-energy-rhel
+      amazon.aws.ec2_instance:
+        name: expand-energy-rhel
+        region: "{{ aws_region }}"
+        image_id: "{{ rhel_ami_id }}"
+        instance_type: t3.micro
+        key_name: "{{ key_pair_name }}"
+        wait: true
+        count: 1
+
+        network:
+          subnet_id: "{{ subnet_id }}"
+          security_group: "{{ security_group_id }}"
+          assign_public_ip: true
+
+        tags:
+          Name: expand-energy-rhel
+          Role: customer-demo
+          OS: rhel
+          Environment: customer-demo
+
+      register: ec2_result
+
+    - name: Display new server information
+      ansible.builtin.debug:
+        msg:
+          - "Instance ID: {{ ec2_result.instances[0].instance_id }}"
+          - "Private IP: {{ ec2_result.instances[0].private_ip_address }}"
+          - "Public IP: {{ ec2_result.instances[0].public_ip_address }}"

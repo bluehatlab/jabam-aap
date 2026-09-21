@@ -1,7 +1,20 @@
+<<<<<<< HEAD
 .DS_Store
+=======
+# Secrets
+*.pem
+*.key
+.env
+>>>>>>> 820485f (ServiceNow Project)
 
 # Terraform
 *.tfstate
 *.tfstate.*
 .terraform/
+<<<<<<< HEAD
 *.tfvars
+=======
+
+# macOS
+.DS_Store
+>>>>>>> 820485f (ServiceNow Project)

@@ -1,0 +1,38 @@
+name: Build AAP ServiceNow Execution Environment
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "AAP-ServiceNow/**"
+      - ".github/workflows/build-ee.yml"
+  workflow_dispatch:
+
+jobs:
+  build-ee:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Ansible Builder
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible-builder
+
+      - name: Build Execution Environment
+        run: |
+          ansible-builder build \
+            --file execution_environment/execution_environment.yml \
+            --tag aap-servicenow-ee:latest
+
+      - name: Verify image exists
+        run: |
+          docker images
