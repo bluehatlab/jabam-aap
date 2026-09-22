@@ -1,46 +1,15 @@
 ---
-- name: Test ServiceNow API
-  hosts: localhost
-  gather_facts: false
+- name: Test AWS RHEL connectivity
+  hosts: all
+  gather_facts: true
 
   tasks:
+    - name: Ping RHEL VM
+      ansible.builtin.ping:
 
-    - name: Display ServiceNow host
+    - name: Show RHEL information
       ansible.builtin.debug:
-        msg: "ServiceNow host is {{ lookup('env', 'SN_HOST') }}"
-    
-    - name: Verify ServiceNow credentials are present
-      ansible.builtin.debug:
-        msg:
-          - "SN_HOST is set: {{ (lookup('env', 'SN_HOST') | length) > 0 }}"
-          - "SN_USERNAME is set: {{ (lookup('env', 'SN_USERNAME') | length) > 0 }}"
-          - "SN_PASSWORD is set: {{ (lookup('env', 'SN_PASSWORD') | length) > 0 }}"
-
-    - name: Test ServiceNow REST API
-      ansible.builtin.uri:
-        url: "{{ lookup('env', 'SN_HOST') }}/api/now/table/incident?sysparm_limit=1"
-        method: GET
-        user: "{{ lookup('env', 'SN_USERNAME') }}"
-        password: "{{ lookup('env', 'SN_PASSWORD') }}"
-        force_basic_auth: true
-        return_content: true
-        headers:
-          Accept: "application/json"
-        status_code: 200
-      register: servicenow_api
-
-    - name: Display HTTP status
-      ansible.builtin.debug:
-        msg: "ServiceNow returned HTTP {{ servicenow_api.status }}"
-
-    - name: Display incident result
-      ansible.builtin.debug:
-        var: servicenow_api.json
-
-    - name: Display HTTP status
-      ansible.builtin.debug:
-        msg: "HTTP status: {{ servicenow_api.status }}"
-
-    - name: Display API response
-      ansible.builtin.debug:
-        var: servicenow_api.content
+        msg: >
+          Connected to {{ inventory_hostname }}
+          running {{ ansible_distribution }}
+          {{ ansible_distribution_version }}
