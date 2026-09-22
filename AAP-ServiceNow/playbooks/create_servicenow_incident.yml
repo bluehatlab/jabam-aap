@@ -26,11 +26,11 @@
         body_format: json
 
         body:
-          short_description: "AAP automated RHEL remediation"
+          short_description: "Apache service failure detected on RHEL"
           description: >-
-            Incident automatically created by
-            Red Hat Ansible Automation Platform.
-          category: "software"
+            Event-Driven Ansible detected an Apache service failure
+            on the RHEL host. An automated remediation workflow
+            has been initiated by Red Hat Ansible Automation Platform.
           impact: "2"
           urgency: "2"
 
@@ -46,3 +46,9 @@
           - "Number: {{ servicenow_incident.json.result.number }}"
           - "Sys ID: {{ servicenow_incident.json.result.sys_id }}"
           - "State: {{ servicenow_incident.json.result.state }}"
+
+    - name: Publish ServiceNow incident for workflow
+      ansible.builtin.set_stats:
+        data:
+          servicenow_incident_number: "{{ servicenow_incident.json.result.number }}"
+          servicenow_incident_sys_id: "{{ servicenow_incident.json.result.sys_id }}"
