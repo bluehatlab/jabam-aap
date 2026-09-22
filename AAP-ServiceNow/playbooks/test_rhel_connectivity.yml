@@ -1,13 +1,17 @@
 ---
-- name: Test RHEL connectivity
-  hosts: rhel
-  gather_facts: true
+- name: Test ServiceNow connection
+  hosts: localhost
+  gather_facts: false
 
   tasks:
-    - name: Display host information
+    - name: Query ServiceNow incidents
+      servicenow.itsm.incident_info:
+        instance:
+          host: "{{ lookup('env', 'SN_HOST') }}"
+          username: "{{ lookup('env', 'SN_USERNAME') }}"
+          password: "{{ lookup('env', 'SN_PASSWORD') }}"
+      register: incidents
+
+    - name: Display incident count
       ansible.builtin.debug:
-        msg:
-          - "Host: {{ inventory_hostname }}"
-          - "IP: {{ ansible_host }}"
-          - "OS: {{ ansible_distribution }}"
-          - "Version: {{ ansible_distribution_version }}"
+        msg: "ServiceNow returned {{ incidents.records | length }} incidents"
