@@ -1,3 +1,36 @@
+# ---
+# - name: Prepare RHEL web service for EDA demo
+#   hosts: ec2-98-89-5-15.compute-1.amazonaws.com
+#   gather_facts: false
+#   become: true
+
+#   tasks:
+#     - name: Install Apache
+#       ansible.builtin.dnf:
+#         name: httpd
+#         state: present
+
+#     - name: Enable and start Apache
+#       ansible.builtin.systemd:
+#         name: httpd
+#         state: started
+#         enabled: true
+
+#     - name: Create demo web page
+#       ansible.builtin.copy:
+#         dest: /var/www/html/index.html
+#         content: |
+#           RHEL 10 - Managed by Ansible Automation Platform
+#         mode: "0644"
+
+#     - name: Verify Apache responds
+#       ansible.builtin.uri:
+#         url: http://localhost
+#         status_code: 200
+
+#     - name: Report success
+#       ansible.builtin.debug:
+#         msg: "Apache is running and responding with HTTP 200."
 ---
 - name: Prepare RHEL web service for EDA demo
   hosts: ec2-98-89-5-15.compute-1.amazonaws.com
@@ -5,6 +38,7 @@
   become: true
 
   tasks:
+
     - name: Install Apache
       ansible.builtin.dnf:
         name: httpd
@@ -15,19 +49,27 @@
         name: httpd
         state: started
         enabled: true
+      register: httpd_start
+      failed_when: false
 
-    - name: Create demo web page
-      ansible.builtin.copy:
-        dest: /var/www/html/index.html
-        content: |
-          RHEL 10 - Managed by Ansible Automation Platform
-        mode: "0644"
+    - name: Get Apache service status
+      ansible.builtin.command:
+        cmd: systemctl status httpd --no-pager -l
+      register: httpd_status
+      changed_when: false
+      failed_when: false
 
-    - name: Verify Apache responds
-      ansible.builtin.uri:
-        url: http://localhost
-        status_code: 200
+    - name: Get recent Apache logs
+      ansible.builtin.command:
+        cmd: journalctl -u httpd --no-pager -n 30
+      register: httpd_logs
+      changed_when: false
+      failed_when: false
 
-    - name: Report success
+    - name: Display Apache status
       ansible.builtin.debug:
-        msg: "Apache is running and responding with HTTP 200."
+        var: httpd_status.stdout_lines
+
+    - name: Display Apache logs
+      ansible.builtin.debug:
+        var: httpd_logs.stdout_lines
