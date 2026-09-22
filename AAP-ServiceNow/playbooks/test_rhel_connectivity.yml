@@ -23,10 +23,10 @@
         user: "{{ lookup('env', 'SN_USERNAME') }}"
         password: "{{ lookup('env', 'SN_PASSWORD') }}"
         force_basic_auth: true
-        validate_certs: true
-        status_code: 200
         return_content: true
-      register: servicenow_api
+        headers:
+          Accept: "application/json"
+        status_code: 200
 
     - name: Display HTTP status
       ansible.builtin.debug:
