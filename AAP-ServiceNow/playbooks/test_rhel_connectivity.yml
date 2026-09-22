@@ -8,6 +8,13 @@
     - name: Display ServiceNow host
       ansible.builtin.debug:
         msg: "ServiceNow host is {{ lookup('env', 'SN_HOST') }}"
+    
+    - name: Verify ServiceNow credentials are present
+      ansible.builtin.debug:
+        msg:
+          - "SN_HOST is set: {{ (lookup('env', 'SN_HOST') | length) > 0 }}"
+          - "SN_USERNAME is set: {{ (lookup('env', 'SN_USERNAME') | length) > 0 }}"
+          - "SN_PASSWORD is set: {{ (lookup('env', 'SN_PASSWORD') | length) > 0 }}"
 
     - name: Test ServiceNow REST API
       ansible.builtin.uri:
