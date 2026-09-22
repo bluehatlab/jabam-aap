@@ -2,7 +2,7 @@
 version: 3
 
 dependencies:
-  galaxy: requirements.yml
+  galaxy: ../requirements.yml
 
 images:
   base_image:
