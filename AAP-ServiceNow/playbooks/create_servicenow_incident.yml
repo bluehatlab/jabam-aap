@@ -1,0 +1,48 @@
+---
+- name: Create ServiceNow incident from AAP
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    sn_host: "{{ lookup('env', 'SN_HOST') }}"
+    sn_username: "{{ lookup('env', 'SN_USERNAME') }}"
+    sn_password: "{{ lookup('env', 'SN_PASSWORD') }}"
+
+  tasks:
+
+    - name: Create incident in ServiceNow
+      ansible.builtin.uri:
+        url: "{{ sn_host }}/api/now/table/incident"
+        method: POST
+
+        user: "{{ sn_username }}"
+        password: "{{ sn_password }}"
+        force_basic_auth: true
+
+        headers:
+          Accept: "application/json"
+          Content-Type: "application/json"
+
+        body_format: json
+
+        body:
+          short_description: "AAP automated RHEL remediation"
+          description: >-
+            Incident automatically created by
+            Red Hat Ansible Automation Platform.
+          category: "software"
+          impact: "2"
+          urgency: "2"
+
+        status_code: 201
+        return_content: true
+
+      register: servicenow_incident
+
+    - name: Display created incident
+      ansible.builtin.debug:
+        msg:
+          - "Incident created successfully"
+          - "Number: {{ servicenow_incident.json.result.number }}"
+          - "Sys ID: {{ servicenow_incident.json.result.sys_id }}"
+          - "State: {{ servicenow_incident.json.result.state }}"
