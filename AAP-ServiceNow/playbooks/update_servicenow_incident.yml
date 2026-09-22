@@ -1,0 +1,46 @@
+---
+- name: Update ServiceNow incident after remediation
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    sn_host: "{{ lookup('env', 'SN_HOST') }}"
+    sn_username: "{{ lookup('env', 'SN_USERNAME') }}"
+    sn_password: "{{ lookup('env', 'SN_PASSWORD') }}"
+
+  tasks:
+
+    - name: Update incident with successful remediation
+      ansible.builtin.uri:
+        url: "{{ sn_host }}/api/now/table/incident/{{ servicenow_incident_sys_id }}"
+        method: PATCH
+
+        user: "{{ sn_username }}"
+        password: "{{ sn_password }}"
+        force_basic_auth: true
+
+        headers:
+          Accept: "application/json"
+          Content-Type: "application/json"
+
+        body_format: json
+
+        body:
+          work_notes: >-
+            Event-Driven Ansible remediation completed successfully.
+            Apache was automatically restored by Red Hat Ansible
+            Automation Platform and HTTP connectivity was verified.
+          state: "6"
+
+        status_code: 200
+        return_content: true
+
+      register: servicenow_update
+
+    - name: Display remediation result
+      ansible.builtin.debug:
+        msg:
+          - "ServiceNow incident updated successfully"
+          - "Incident: {{ servicenow_incident_number }}"
+          - "Apache remediation completed successfully"
+          - "Incident state: {{ servicenow_update.json.result.state }}"
