@@ -1,0 +1,19 @@
+---
+- name: RHEL Apache automatic remediation
+  hosts: all
+
+  sources:
+    - ansible.eda.webhook:
+        host: 0.0.0.0
+        port: 5000
+
+  rules:
+    - name: Remediate failed Apache service
+      condition: >-
+        event.payload.service == "httpd" and
+        event.payload.status == "down"
+
+      action:
+        run_job_template:
+          name: "Remediate RHEL Apache"
+          organization: "Default"
