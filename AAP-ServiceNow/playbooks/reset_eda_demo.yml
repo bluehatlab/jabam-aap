@@ -1,0 +1,36 @@
+---
+- name: Reset RHEL EDA demo environment
+  hosts: ec2-98-89-5-15.compute-1.amazonaws.com
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Stop Apache if running
+      ansible.builtin.systemd:
+        name: httpd
+        state: stopped
+        enabled: false
+      failed_when: false
+
+    - name: Remove Apache
+      ansible.builtin.dnf:
+        name: httpd
+        state: absent
+
+    - name: Remove Apache web content
+      ansible.builtin.file:
+        path: /var/www/html
+        state: absent
+
+    - name: Verify Apache is removed
+      ansible.builtin.command:
+        cmd: rpm -q httpd
+      register: apache_check
+      changed_when: false
+      failed_when: false
+
+    - name: Display reset result
+      ansible.builtin.debug:
+        msg: >-
+          Demo environment reset.
+          Apache package check returned: {{ apache_check.stdout }}
