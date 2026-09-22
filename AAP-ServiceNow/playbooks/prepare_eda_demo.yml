@@ -73,3 +73,14 @@
     - name: Display Apache logs
       ansible.builtin.debug:
         var: httpd_logs.stdout_lines
+
+    - name: Get Apache failure logs
+      ansible.builtin.shell: |
+        journalctl -u httpd --since "2 minutes ago" --no-pager
+      register: httpd_failure_logs
+      changed_when: false
+      failed_when: false
+
+    - name: Display Apache failure logs
+      ansible.builtin.debug:
+        msg: "{{ httpd_failure_logs.stdout }}"
