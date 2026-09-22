@@ -8,12 +8,12 @@
         port: 5000
 
   rules:
-    - name: Remediate failed Apache service
+    - name: Apache service failure detected
       condition: >-
         event.payload.service == "httpd" and
         event.payload.status == "down"
 
       action:
-        run_job_template:
-          name: "Remediate RHEL Apache"
-          organization: "Default"
+        run_workflow_template:
+          name: "EDA - RHEL ServiceNow Remediation"
+          organization: "JULIAN"
