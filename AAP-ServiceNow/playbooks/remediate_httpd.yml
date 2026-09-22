@@ -1,0 +1,34 @@
+---
+- name: Remediate failed Apache service
+  hosts: ec2-98-89-5-15.compute-1.amazonaws.com
+  gather_facts: false
+  become: true
+
+  tasks:
+
+    - name: Check current Apache status
+      ansible.builtin.command:
+        cmd: systemctl is-active httpd
+      register: httpd_before
+      failed_when: false
+      changed_when: false
+
+    - name: Display detected state
+      ansible.builtin.debug:
+        msg: "EDA remediation started. httpd state: {{ httpd_before.stdout }}"
+
+    - name: Start Apache
+      ansible.builtin.systemd:
+        name: httpd
+        state: started
+        enabled: true
+
+    - name: Verify web service
+      ansible.builtin.uri:
+        url: http://localhost
+        status_code: 200
+      register: web_check
+
+    - name: Report remediation
+      ansible.builtin.debug:
+        msg: "Remediation successful - Apache returned HTTP {{ web_check.status }}"
