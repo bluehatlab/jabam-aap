@@ -5,32 +5,50 @@
   become: true
 
   tasks:
-    - name: Stop Apache if running
+
+    - name: Stop Apache if present
       ansible.builtin.systemd:
         name: httpd
         state: stopped
         enabled: false
       failed_when: false
 
-    - name: Remove Apache
+    - name: Remove Apache package
       ansible.builtin.dnf:
         name: httpd
         state: absent
 
-    - name: Remove Apache web content
+    - name: Ensure Apache document root exists
       ansible.builtin.file:
         path: /var/www/html
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Remove old demo page
+      ansible.builtin.file:
+        path: /var/www/html/index.html
         state: absent
 
-    - name: Verify Apache is removed
+    - name: Verify Apache package is absent
       ansible.builtin.command:
         cmd: rpm -q httpd
-      register: apache_check
+      register: httpd_package
       changed_when: false
       failed_when: false
 
-    - name: Display reset result
+    - name: Verify Apache service state
+      ansible.builtin.command:
+        cmd: systemctl is-active httpd
+      register: httpd_service
+      changed_when: false
+      failed_when: false
+
+    - name: Report reset status
       ansible.builtin.debug:
-        msg: >-
-          Demo environment reset.
-          Apache package check returned: {{ apache_check.stdout }}
+        msg:
+          - "EDA demo environment reset complete."
+          - "Apache package: {{ httpd_package.stdout }}"
+          - "Apache service: {{ httpd_service.stdout }}"
+          - "Document root /var/www/html exists and is ready for Prep."
