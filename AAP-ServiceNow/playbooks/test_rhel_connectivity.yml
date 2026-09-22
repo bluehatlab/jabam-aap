@@ -21,6 +21,10 @@
         return_content: true
       register: servicenow_api
 
+    - name: Display HTTP status
+      ansible.builtin.debug:
+        msg: "HTTP status: {{ servicenow_api.status }}"
+
     - name: Display API response
       ansible.builtin.debug:
-        msg: "{{ servicenow_api.json }}"
+        var: servicenow_api.content
