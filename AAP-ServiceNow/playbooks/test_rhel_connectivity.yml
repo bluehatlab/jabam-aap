@@ -27,6 +27,15 @@
         headers:
           Accept: "application/json"
         status_code: 200
+      register: servicenow_api
+
+    - name: Display HTTP status
+      ansible.builtin.debug:
+        msg: "ServiceNow returned HTTP {{ servicenow_api.status }}"
+
+    - name: Display incident result
+      ansible.builtin.debug:
+        var: servicenow_api.json
 
     - name: Display HTTP status
       ansible.builtin.debug:
