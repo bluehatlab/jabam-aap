@@ -1,0 +1,22 @@
+---
+- name: Simulate Apache failure
+  hosts: ec2-98-89-5-15.compute-1.amazonaws.com
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Stop Apache
+      ansible.builtin.systemd:
+        name: httpd
+        state: stopped
+
+    - name: Verify Apache is down
+      ansible.builtin.command:
+        cmd: systemctl is-active httpd
+      register: httpd_status
+      changed_when: false
+      failed_when: false
+
+    - name: Display failure
+      ansible.builtin.debug:
+        msg: "Apache status: {{ httpd_status.stdout }}"
