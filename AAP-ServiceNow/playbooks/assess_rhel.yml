@@ -1,0 +1,39 @@
+---
+- name: Assess RHEL security update status
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Collect available security advisories
+      ansible.builtin.command:
+        cmd: dnf -q updateinfo list security
+      register: security_updates
+      changed_when: false
+
+    - name: Extract RHSA advisories
+      ansible.builtin.set_fact:
+        rhsa_findings: >-
+          {{
+            security_updates.stdout_lines
+            | select('match', '^RHSA-')
+            | list
+          }}
+
+    - name: Determine assessment status
+      ansible.builtin.set_fact:
+        assessment_status: >-
+          {{
+            'ACTION_REQUIRED'
+            if rhsa_findings | length > 0
+            else 'NO_ACTION_REQUIRED'
+          }}
+
+    - name: Display assessment result
+      ansible.builtin.debug:
+        msg:
+          hostname: "{{ inventory_hostname }}"
+          rhel_version: "{{ ansible_distribution_version }}"
+          security_advisory_count: "{{ rhsa_findings | length }}"
+          status: "{{ assessment_status }}"
+          advisories: "{{ rhsa_findings }}"
