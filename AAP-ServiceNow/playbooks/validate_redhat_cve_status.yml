@@ -1,0 +1,129 @@
+---
+- name: Validate scanner claim with Red Hat CVE status
+  hosts: scj_rhel_demo
+  become: true
+  gather_facts: true
+
+  vars:
+    finding:
+      scanner: Mock Tenable
+      plugin_id: 200001
+      package: NetworkManager
+      cve: CVE-2026-10805
+      advisory: RHSA-2026:58572
+      cve_api_url: >-
+        https://access.redhat.com/hydra/rest/securitydata/cve/CVE-2026-10805.json
+
+  tasks:
+    - name: Collect installed package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Collect applicable security advisories
+      ansible.builtin.command:
+        cmd: dnf -q updateinfo list security
+      register: applicable_advisories
+      changed_when: false
+
+    - name: Retrieve authoritative Red Hat CVE data
+      ansible.builtin.uri:
+        url: "{{ finding.cve_api_url }}"
+        method: GET
+        return_content: true
+        status_code: 200
+      register: redhat_cve
+      delegate_to: localhost
+      run_once: true
+      become: false
+
+    - name: Select Red Hat status for this RHEL major version
+      ansible.builtin.set_fact:
+        package_installed: >-
+          {{
+            finding.package in ansible_facts.packages
+          }}
+        advisory_applicable: >-
+          {{
+            finding.advisory in applicable_advisories.stdout
+          }}
+        matching_package_states: >-
+          {{
+            redhat_cve.json.package_state
+            | default([])
+            | selectattr(
+                'product_name',
+                'search',
+                'Red Hat Enterprise Linux '
+                ~ ansible_facts.distribution_major_version
+              )
+            | selectattr('package_name', 'equalto', finding.package)
+            | list
+          }}
+        matching_fixed_releases: >-
+          {{
+            redhat_cve.json.affected_release
+            | default([])
+            | selectattr(
+                'product_name',
+                'search',
+                'Red Hat Enterprise Linux '
+                ~ ansible_facts.distribution_major_version
+              )
+            | list
+          }}
+
+    - name: Extract Red Hat fix states
+      ansible.builtin.set_fact:
+        redhat_fix_states: >-
+          {{
+            matching_package_states
+            | map(attribute='fix_state')
+            | list
+          }}
+
+    - name: Determine evidence-based disposition
+      ansible.builtin.set_fact:
+        vex_disposition: >-
+          {% if not package_installed %}
+          NOT_APPLICABLE_PACKAGE_NOT_INSTALLED
+          {% elif advisory_applicable %}
+          AFFECTED_FIX_AVAILABLE
+          {% elif 'Not affected' in redhat_fix_states %}
+          NOT_AFFECTED_BY_REDHAT
+          {% elif 'Will not fix' in redhat_fix_states %}
+          AFFECTED_NO_FIX_WILL_NOT_FIX
+          {% elif 'Fix deferred' in redhat_fix_states %}
+          AFFECTED_FIX_DEFERRED
+          {% elif 'Affected' in redhat_fix_states
+                  or 'New' in redhat_fix_states %}
+          AFFECTED_NO_FIX_CURRENTLY_AVAILABLE
+          {% elif matching_fixed_releases | length > 0 %}
+          FIXED_BY_REDHAT_ADVISORY_OR_BACKPORT
+          {% else %}
+          REQUIRES_MANUAL_REVIEW
+          {% endif %}
+
+    - name: Display Red Hat CVE evidence
+      ansible.builtin.debug:
+        msg:
+          host: "{{ inventory_hostname }}"
+          rhel_version: "{{ ansible_facts.distribution_version }}"
+          scanner: "{{ finding.scanner }}"
+          scanner_plugin: "{{ finding.plugin_id }}"
+          cve: "{{ finding.cve }}"
+          package: "{{ finding.package }}"
+          package_installed: "{{ package_installed }}"
+          installed_versions: >-
+            {{
+              ansible_facts.packages[finding.package]
+              | default([])
+              | map(attribute='version')
+              | list
+            }}
+          advisory: "{{ finding.advisory }}"
+          advisory_applicable: "{{ advisory_applicable }}"
+          red_hat_fix_states: "{{ redhat_fix_states }}"
+          fixed_release_evidence: "{{ matching_fixed_releases }}"
+          disposition: "{{ vex_disposition | trim }}"
+          red_hat_cve_url: >-
+            https://access.redhat.com/security/cve/{{ finding.cve | lower }}
