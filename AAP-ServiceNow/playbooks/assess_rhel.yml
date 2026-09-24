@@ -1,22 +1,32 @@
 ---
-- name: Assess RHEL security update status
+- name: Assess a multi-version RHEL environment
   hosts: all
   become: true
   gather_facts: true
 
   tasks:
-    - name: Collect available security advisories
+    - name: Collect available Red Hat security advisories
       ansible.builtin.command:
         cmd: dnf -q updateinfo list security
       register: security_updates
       changed_when: false
 
-    - name: Extract RHSA advisories
+    - name: Extract advisory package records
       ansible.builtin.set_fact:
-        rhsa_findings: >-
+        advisory_packages: >-
           {{
             security_updates.stdout_lines
-            | select('match', '^RHSA-')
+            | select('search', 'RHSA-')
+            | list
+          }}
+
+    - name: Extract unique RHSA identifiers
+      ansible.builtin.set_fact:
+        unique_advisories: >-
+          {{
+            security_updates.stdout
+            | regex_findall('RHSA-\d{4}:\d+')
+            | unique
             | list
           }}
 
@@ -25,15 +35,33 @@
         assessment_status: >-
           {{
             'ACTION_REQUIRED'
-            if rhsa_findings | length > 0
+            if unique_advisories | length > 0
             else 'NO_ACTION_REQUIRED'
           }}
 
-    - name: Display assessment result
+    - name: Display VM facts and security assessment
       ansible.builtin.debug:
         msg:
-          hostname: "{{ inventory_hostname }}"
-          rhel_version: "{{ ansible_distribution_version }}"
-          security_advisory_count: "{{ rhsa_findings | length }}"
-          status: "{{ assessment_status }}"
-          advisories: "{{ rhsa_findings }}"
+          system_information:
+            inventory_name: "{{ inventory_hostname }}"
+            system_hostname: "{{ ansible_facts.hostname }}"
+            operating_system: "{{ ansible_facts.distribution }}"
+            rhel_version: "{{ ansible_facts.distribution_version }}"
+            rhel_major_version: "{{ ansible_facts.distribution_major_version }}"
+            architecture: "{{ ansible_facts.architecture }}"
+            kernel: "{{ ansible_facts.kernel }}"
+            virtual_cpus: "{{ ansible_facts.processor_vcpus }}"
+            memory_mb: "{{ ansible_facts.memtotal_mb }}"
+            primary_ip: >-
+              {{
+                ansible_facts.default_ipv4.address
+                | default('Unavailable')
+              }}
+            package_manager: "{{ ansible_facts.pkg_mgr }}"
+
+          security_assessment:
+            status: "{{ assessment_status }}"
+            unique_advisory_count: "{{ unique_advisories | length }}"
+            affected_package_update_count: "{{ advisory_packages | length }}"
+            unique_advisories: "{{ unique_advisories }}"
+            advisory_package_details: "{{ advisory_packages }}"
