@@ -1,0 +1,19 @@
+---
+mock_tenable_findings:
+  - plugin_id: 200001
+    severity: High
+    package: NetworkManager
+    finding: NetworkManager security update required
+    reported_advisory: RHSA-2026:58572
+
+  - plugin_id: 200002
+    severity: High
+    package: telnet-server
+    finding: Telnet server vulnerability detected
+    reported_advisory: RHSA-DEMO:00001
+
+  - plugin_id: 200003
+    severity: Medium
+    package: kernel
+    finding: Scanner detected vulnerable upstream kernel version
+    reported_advisory: RHSA-DEMO:00002

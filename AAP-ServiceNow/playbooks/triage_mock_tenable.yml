@@ -1,0 +1,57 @@
+---
+- name: Triage mock Tenable findings against RHEL systems
+  hosts: scj_rhel_demo
+  become: true
+  gather_facts: true
+
+  vars_files:
+    - vars/mock_tenable_findings.yml
+
+  tasks:
+    - name: Collect installed package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Collect applicable Red Hat security advisories
+      ansible.builtin.command:
+        cmd: dnf -q updateinfo list security
+      register: redhat_advisories
+      changed_when: false
+
+    - name: Evaluate mock Tenable findings
+      ansible.builtin.set_fact:
+        triage_results: >-
+          {{
+            triage_results | default([])
+            + [{
+                'plugin_id': item.plugin_id,
+                'severity': item.severity,
+                'finding': item.finding,
+                'package': item.package,
+                'package_installed': item.package in ansible_facts.packages,
+                'red_hat_advisory_applicable':
+                  item.reported_advisory in redhat_advisories.stdout,
+                'decision':
+                  (
+                    'NOT_APPLICABLE_PACKAGE_NOT_INSTALLED'
+                    if item.package not in ansible_facts.packages
+                    else
+                    (
+                      'REMEDIATE'
+                      if item.reported_advisory in redhat_advisories.stdout
+                      else
+                      'REQUIRES_REDHAT_VEX_REVIEW'
+                    )
+                  )
+              }]
+          }}
+      loop: "{{ mock_tenable_findings }}"
+
+    - name: Display GIS Security triage evidence
+      ansible.builtin.debug:
+        msg:
+          host: "{{ inventory_hostname }}"
+          rhel_version: "{{ ansible_facts.distribution_version }}"
+          scanner: Mock Tenable
+          findings_received: "{{ mock_tenable_findings | length }}"
+          triage_results: "{{ triage_results }}"
