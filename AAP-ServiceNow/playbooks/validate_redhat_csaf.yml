@@ -1,0 +1,91 @@
+---
+- name: Validate scanner finding with Red Hat CSAF evidence
+  hosts: scj_rhel_demo
+  become: true
+  gather_facts: true
+
+  vars:
+    finding:
+      scanner: Mock Tenable
+      plugin_id: 200001
+      package: NetworkManager
+      cve: CVE-2026-10805
+      advisory: RHSA-2026:58572
+      csaf_url: >-
+        https://access.redhat.com/hydra/rest/securitydata/csaf/RHSA-2026:58572.json
+
+  tasks:
+    - name: Collect installed package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Collect applicable Red Hat advisories
+      ansible.builtin.command:
+        cmd: dnf -q updateinfo list security
+      register: applicable_advisories
+      changed_when: false
+
+    - name: Retrieve authoritative Red Hat CSAF document
+      ansible.builtin.uri:
+        url: "{{ finding.csaf_url }}"
+        method: GET
+        return_content: true
+        status_code: 200
+      register: redhat_csaf
+      delegate_to: localhost
+      run_once: true
+      become: false
+
+    - name: Determine CSAF applicability
+      ansible.builtin.set_fact:
+        package_installed: >-
+          {{
+            finding.package in ansible_facts.packages
+          }}
+        rhel_major_referenced: >-
+          {{
+            (
+              'Red Hat Enterprise Linux '
+              ~ ansible_facts.distribution_major_version
+            )
+            in (redhat_csaf.json | to_json)
+          }}
+        advisory_currently_applicable: >-
+          {{
+            finding.advisory in applicable_advisories.stdout
+          }}
+
+    - name: Determine evidence-based disposition
+      ansible.builtin.set_fact:
+        evidence_disposition: >-
+          {% if not package_installed %}
+          NOT_APPLICABLE_PACKAGE_NOT_INSTALLED
+          {% elif advisory_currently_applicable %}
+          REMEDIATE_WITH_REDHAT_ADVISORY
+          {% elif not rhel_major_referenced %}
+          ADVISORY_NOT_APPLICABLE_TO_THIS_RHEL_MAJOR_VERSION
+          {% else %}
+          REVIEW_INSTALLED_VERSION_AND_VEX_STATUS
+          {% endif %}
+
+    - name: Display Red Hat security evidence
+      ansible.builtin.debug:
+        msg:
+          host: "{{ inventory_hostname }}"
+          rhel_version: "{{ ansible_facts.distribution_version }}"
+          scanner: "{{ finding.scanner }}"
+          scanner_plugin: "{{ finding.plugin_id }}"
+          claimed_cve: "{{ finding.cve }}"
+          package: "{{ finding.package }}"
+          package_installed: "{{ package_installed }}"
+          red_hat_advisory: "{{ finding.advisory }}"
+          red_hat_csaf_title: "{{ redhat_csaf.json.document.title }}"
+          red_hat_severity: >-
+            {{
+              redhat_csaf.json.document.aggregate_severity.text
+            }}
+          rhel_major_referenced_by_csaf: "{{ rhel_major_referenced }}"
+          advisory_currently_applicable: >-
+            {{ advisory_currently_applicable }}
+          disposition: "{{ evidence_disposition | trim }}"
+          evidence_url: "{{ finding.csaf_url }}"
