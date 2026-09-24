@@ -1,0 +1,72 @@
+---
+- name: Remediate applicable RHEL security advisories
+  hosts: scj_rhel_demo
+  become: true
+  gather_facts: true
+  serial: 1
+
+  tasks:
+    - name: Count applicable advisories before remediation
+      ansible.builtin.command:
+        cmd: dnf -q updateinfo list security
+      register: advisories_before
+      changed_when: false
+
+    - name: Extract unique advisories before remediation
+      ansible.builtin.set_fact:
+        rhsa_before: >-
+          {{
+            advisories_before.stdout
+            | regex_findall('RHSA-\d{4}:\d+')
+            | unique
+            | list
+          }}
+
+    - name: Install applicable security updates
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+        security: true
+        update_only: true
+      register: patch_result
+
+    - name: Reboot after security remediation
+      ansible.builtin.reboot:
+        reboot_timeout: 900
+      when: patch_result.changed
+
+    - name: Refresh DNF metadata
+      ansible.builtin.command:
+        cmd: dnf -q makecache
+      changed_when: false
+
+    - name: Check advisories after remediation
+      ansible.builtin.command:
+        cmd: dnf -q updateinfo list security
+      register: advisories_after
+      changed_when: false
+
+    - name: Extract unique advisories after remediation
+      ansible.builtin.set_fact:
+        rhsa_after: >-
+          {{
+            advisories_after.stdout
+            | regex_findall('RHSA-\d{4}:\d+')
+            | unique
+            | list
+          }}
+
+    - name: Display remediation evidence
+      ansible.builtin.debug:
+        msg:
+          host: "{{ inventory_hostname }}"
+          rhel_version: "{{ ansible_facts.distribution_version }}"
+          advisories_before: "{{ rhsa_before | length }}"
+          advisories_after: "{{ rhsa_after | length }}"
+          packages_changed: "{{ patch_result.changed }}"
+          result: >-
+            {{
+              'REMEDIATED'
+              if rhsa_after | length == 0
+              else 'REVIEW_REQUIRED'
+            }}
