@@ -1,0 +1,92 @@
+---
+- name: Analyze RHEL package necessity
+  hosts: scj_rhel_demo
+  become: true
+  gather_facts: true
+
+  vars_files:
+    - vars/mock_tenable_findings.yml
+
+  tasks:
+    - name: Collect installed package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Identify explicitly installed packages
+      ansible.builtin.command:
+        cmd: dnf -q repoquery --userinstalled
+      register: user_installed
+      changed_when: false
+      failed_when: false
+
+    - name: Identify unneeded package candidates
+      ansible.builtin.command:
+        cmd: dnf -q repoquery --unneeded
+      register: unneeded_packages
+      changed_when: false
+      failed_when: false
+
+    - name: Classify packages reported by Tenable
+      ansible.builtin.set_fact:
+        package_analysis: >-
+          {{
+            package_analysis | default([])
+            + [{
+                'package': item.package,
+                'installed': item.package in ansible_facts.packages,
+                'classification':
+                  (
+                    'PACKAGE_NOT_INSTALLED'
+                    if item.package not in ansible_facts.packages
+                    else
+                    (
+                      'UNNEEDED_REMOVAL_CANDIDATE'
+                      if (
+                        unneeded_packages.rc == 0
+                        and item.package in unneeded_packages.stdout
+                      )
+                      else
+                      (
+                        'EXPLICITLY_INSTALLED_REVIEW_REQUIRED'
+                        if (
+                          user_installed.rc == 0
+                          and item.package in user_installed.stdout
+                        )
+                        else
+                        'REQUIRED_OR_DEPENDENCY'
+                      )
+                    )
+                  ),
+                'recommended_action':
+                  (
+                    'No removal action required'
+                    if item.package not in ansible_facts.packages
+                    else
+                    (
+                      'Review application ownership before approved removal'
+                      if (
+                        unneeded_packages.rc == 0
+                        and item.package in unneeded_packages.stdout
+                      )
+                      else
+                      'Retain unless application owner approves removal'
+                    )
+                  )
+              }]
+          }}
+      loop: "{{ mock_tenable_findings }}"
+
+    - name: Display conservative package analysis
+      ansible.builtin.debug:
+        msg:
+          host: "{{ inventory_hostname }}"
+          rhel_version: "{{ ansible_facts.distribution_version }}"
+          policy: >-
+            Removal candidates are never automatically removed.
+            Application ownership and change approval are required.
+          repoquery_available: >-
+            {{
+              user_installed.rc == 0
+              and unneeded_packages.rc == 0
+            }}
+          package_analysis: "{{ package_analysis }}"
