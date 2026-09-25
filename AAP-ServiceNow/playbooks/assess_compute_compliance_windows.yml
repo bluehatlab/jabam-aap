@@ -2,8 +2,7 @@
 # ============================================================
 # WINDOWS SERVER COMPUTE COMPLIANCE ASSESSMENT
 #
-# Assessment only.
-# This playbook detects drift but makes no changes.
+# Assessment only — no configuration changes.
 # ============================================================
 
 - name: Assess Windows Server Compute Compliance
@@ -12,16 +11,16 @@
 
   tasks:
 
-    # --------------------------------------------------------
-    # Control 1 - Host Firewall
-    # All Windows Firewall profiles must be enabled
-    # --------------------------------------------------------
+    # ========================================================
+    # CONTROL 1 - HOST FIREWALL
+    # ========================================================
 
     - name: "[WINDOWS] Check Windows Firewall profiles"
       ansible.windows.win_shell: |
         $profiles = Get-NetFirewallProfile
+        $disabled = $profiles | Where-Object { $_.Enabled -eq $false }
 
-        if (($profiles | Where-Object { $_.Enabled -eq $false }).Count -eq 0) {
+        if ($disabled.Count -eq 0) {
             Write-Output "COMPLIANT"
         }
         else {
@@ -40,21 +39,15 @@
           }}
 
 
-    # --------------------------------------------------------
-    # Control 2 - Update Readiness
-    # Windows Update must not be disabled
-    # --------------------------------------------------------
+    # ========================================================
+    # CONTROL 2 - UPDATE READINESS
+    # ========================================================
 
     - name: "[WINDOWS] Check Windows Update service"
       ansible.windows.win_shell: |
         $service = Get-CimInstance Win32_Service -Filter "Name='wuauserv'"
 
-        if ($service.StartMode -eq "Disabled") {
-            Write-Output "NON_COMPLIANT"
-        }
-        else {
-            Write-Output "COMPLIANT"
-        }
+        Write-Output $service.StartMode
       register: windows_update
       changed_when: false
 
@@ -62,29 +55,19 @@
       ansible.builtin.set_fact:
         windows_update_compliant: >-
           {{
-            'COMPLIANT' in windows_update.stdout
-            and
-            'NON_COMPLIANT' not in windows_update.stdout
+            (windows_update.stdout | trim | lower) != 'disabled'
           }}
 
 
-    # --------------------------------------------------------
-    # Control 3 - Secure Remote Access
-    # RDP Network Level Authentication must be enabled
-    # --------------------------------------------------------
+    # ========================================================
+    # CONTROL 3 - SECURE REMOTE ACCESS
+    # ========================================================
 
     - name: "[WINDOWS] Check RDP Network Level Authentication"
       ansible.windows.win_shell: |
-        $value = (Get-ItemProperty `
+        (Get-ItemProperty `
           -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
           -Name UserAuthentication).UserAuthentication
-
-        if ($value -eq 1) {
-            Write-Output "COMPLIANT"
-        }
-        else {
-            Write-Output "NON_COMPLIANT"
-        }
       register: windows_nla
       changed_when: false
 
@@ -92,15 +75,13 @@
       ansible.builtin.set_fact:
         windows_nla_compliant: >-
           {{
-            'COMPLIANT' in windows_nla.stdout
-            and
-            'NON_COMPLIANT' not in windows_nla.stdout
+            (windows_nla.stdout | trim) == '1'
           }}
 
 
-    # --------------------------------------------------------
-    # Overall Compliance
-    # --------------------------------------------------------
+    # ========================================================
+    # OVERALL RESULT
+    # ========================================================
 
     - name: "[WINDOWS] Calculate overall compliance"
       ansible.builtin.set_fact:
@@ -122,13 +103,18 @@
           - "Version: {{ ansible_distribution_version }}"
           - ""
           - "CONTROL 1 - Host Firewall"
-          - "Windows Firewall: {{ 'PASS' if windows_firewall_compliant else 'FAIL' }}"
+          - "Required: All firewall profiles enabled"
+          - "Result: {{ 'PASS' if windows_firewall_compliant else 'FAIL' }}"
           - ""
           - "CONTROL 2 - Update Readiness"
-          - "Windows Update: {{ 'PASS' if windows_update_compliant else 'FAIL' }}"
+          - "Required: Windows Update not disabled"
+          - "Observed: {{ windows_update.stdout | trim }}"
+          - "Result: {{ 'PASS' if windows_update_compliant else 'FAIL' }}"
           - ""
           - "CONTROL 3 - Secure Remote Access"
-          - "RDP NLA: {{ 'PASS' if windows_nla_compliant else 'FAIL' }}"
+          - "Required: RDP NLA enabled"
+          - "Observed: {{ windows_nla.stdout | trim }}"
+          - "Result: {{ 'PASS' if windows_nla_compliant else 'FAIL' }}"
           - ""
           - "OVERALL: {{ 'COMPLIANT' if compute_compliant else 'NON-COMPLIANT' }}"
           - "============================================"

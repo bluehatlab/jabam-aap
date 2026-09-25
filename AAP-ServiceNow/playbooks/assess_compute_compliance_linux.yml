@@ -2,8 +2,7 @@
 # ============================================================
 # RHEL + AMAZON LINUX COMPUTE COMPLIANCE ASSESSMENT
 #
-# Assessment only.
-# This playbook detects drift but makes no changes.
+# Assessment only — no configuration changes.
 # ============================================================
 
 - name: Assess RHEL and Amazon Linux Compute Compliance
@@ -13,68 +12,85 @@
 
   tasks:
 
-    # --------------------------------------------------------
-    # Control 1 - Secure Remote Access
-    # Root SSH login must be disabled
-    # --------------------------------------------------------
+    # ========================================================
+    # CONTROL 1 - SECURE REMOTE ACCESS
+    # Required: Direct SSH root login disabled
+    # ========================================================
 
-    - name: "[LINUX] Check SSH root login policy"
+    - name: "[LINUX] Read effective SSH configuration"
       ansible.builtin.command:
         cmd: sshd -T
       register: sshd_config
       changed_when: false
       failed_when: false
 
+    - name: "[LINUX] Determine SSH root login setting"
+      ansible.builtin.set_fact:
+        ssh_root_setting: >-
+          {{
+            sshd_config.stdout_lines
+            | select('match', '^permitrootlogin ')
+            | first
+            | default('not found')
+          }}
+
     - name: "[LINUX] Evaluate SSH root login compliance"
       ansible.builtin.set_fact:
         ssh_root_compliant: >-
           {{
-            'permitrootlogin no'
-            in (sshd_config.stdout | lower)
+            ssh_root_setting == 'permitrootlogin no'
           }}
 
 
-    # --------------------------------------------------------
-    # Gather service information
-    # --------------------------------------------------------
+    # ========================================================
+    # COLLECT SERVICE STATE
+    # ========================================================
 
     - name: "[LINUX] Gather service facts"
       ansible.builtin.service_facts:
 
 
-    # --------------------------------------------------------
-    # Control 2 - Host Firewall
-    # firewalld must be running
-    # --------------------------------------------------------
+    # ========================================================
+    # CONTROL 2 - HOST FIREWALL
+    # Required: firewalld installed and running
+    # ========================================================
+
+    - name: "[LINUX] Determine firewall state"
+      ansible.builtin.set_fact:
+        firewall_state: >-
+          {{
+            ansible_facts.services['firewalld.service'].state
+            if 'firewalld.service' in ansible_facts.services
+            else 'not installed'
+          }}
 
     - name: "[LINUX] Evaluate firewall compliance"
       ansible.builtin.set_fact:
-        firewall_compliant: >-
+        firewall_compliant: "{{ firewall_state == 'running' }}"
+
+
+    # ========================================================
+    # CONTROL 3 - TIME SYNCHRONIZATION
+    # Required: chronyd running
+    # ========================================================
+
+    - name: "[LINUX] Determine Chrony state"
+      ansible.builtin.set_fact:
+        chrony_state: >-
           {{
-            'firewalld.service' in ansible_facts.services
-            and
-            ansible_facts.services['firewalld.service'].state == 'running'
+            ansible_facts.services['chronyd.service'].state
+            if 'chronyd.service' in ansible_facts.services
+            else 'not installed'
           }}
-
-
-    # --------------------------------------------------------
-    # Control 3 - Time Synchronization
-    # chronyd must be running
-    # --------------------------------------------------------
 
     - name: "[LINUX] Evaluate time synchronization compliance"
       ansible.builtin.set_fact:
-        chrony_compliant: >-
-          {{
-            'chronyd.service' in ansible_facts.services
-            and
-            ansible_facts.services['chronyd.service'].state == 'running'
-          }}
+        chrony_compliant: "{{ chrony_state == 'running' }}"
 
 
-    # --------------------------------------------------------
-    # Overall Compliance
-    # --------------------------------------------------------
+    # ========================================================
+    # OVERALL RESULT
+    # ========================================================
 
     - name: "[LINUX] Calculate overall compliance"
       ansible.builtin.set_fact:
@@ -96,13 +112,19 @@
           - "Version: {{ ansible_distribution_version }}"
           - ""
           - "CONTROL 1 - Secure Remote Access"
-          - "SSH Root Login Disabled: {{ 'PASS' if ssh_root_compliant else 'FAIL' }}"
+          - "Required: permitrootlogin no"
+          - "Observed: {{ ssh_root_setting }}"
+          - "Result: {{ 'PASS' if ssh_root_compliant else 'FAIL' }}"
           - ""
           - "CONTROL 2 - Host Firewall"
-          - "Firewall Running: {{ 'PASS' if firewall_compliant else 'FAIL' }}"
+          - "Required: firewalld running"
+          - "Observed: {{ firewall_state }}"
+          - "Result: {{ 'PASS' if firewall_compliant else 'FAIL' }}"
           - ""
           - "CONTROL 3 - Time Synchronization"
-          - "Chrony Running: {{ 'PASS' if chrony_compliant else 'FAIL' }}"
+          - "Required: chronyd running"
+          - "Observed: {{ chrony_state }}"
+          - "Result: {{ 'PASS' if chrony_compliant else 'FAIL' }}"
           - ""
           - "OVERALL: {{ 'COMPLIANT' if compute_compliant else 'NON-COMPLIANT' }}"
           - "============================================"

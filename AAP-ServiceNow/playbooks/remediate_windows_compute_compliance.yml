@@ -1,0 +1,58 @@
+---
+# ============================================================
+# WINDOWS SERVER COMPUTE COMPLIANCE REMEDIATION
+# ============================================================
+
+- name: Remediate Windows Server Compute Compliance
+  hosts: windows
+  gather_facts: false
+
+  tasks:
+
+    # ========================================================
+    # CONTROL 1 - HOST FIREWALL
+    # ========================================================
+
+    - name: "[WINDOWS] Enable all Windows Firewall profiles"
+      ansible.windows.win_shell: |
+        Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True
+
+
+    # ========================================================
+    # CONTROL 2 - UPDATE READINESS
+    # ========================================================
+
+    - name: "[WINDOWS] Ensure Windows Update is not disabled"
+      ansible.windows.win_service:
+        name: wuauserv
+        start_mode: manual
+
+
+    # ========================================================
+    # CONTROL 3 - SECURE REMOTE ACCESS
+    # ========================================================
+
+    - name: "[WINDOWS] Enforce RDP Network Level Authentication"
+      ansible.windows.win_regedit:
+        path: HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp
+        name: UserAuthentication
+        data: 1
+        type: dword
+
+
+    # ========================================================
+    # REMEDIATION SUMMARY
+    # ========================================================
+
+    - name: "[WINDOWS] Display remediation summary"
+      ansible.builtin.debug:
+        msg:
+          - "============================================"
+          - "WINDOWS COMPLIANCE REMEDIATION"
+          - "============================================"
+          - "Host: {{ inventory_hostname }}"
+          - ""
+          - "Host Firewall: ENFORCED"
+          - "Update Readiness: ENFORCED"
+          - "RDP NLA: ENFORCED"
+          - "============================================"

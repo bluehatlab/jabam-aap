@@ -1,0 +1,85 @@
+---
+# ============================================================
+# RHEL + AMAZON LINUX COMPUTE COMPLIANCE REMEDIATION
+#
+# Enforces the defined Linux compute baseline.
+# ============================================================
+
+- name: Remediate RHEL and Amazon Linux Compute Compliance
+  hosts: rhel:amazon_linux
+  become: true
+  gather_facts: true
+
+  tasks:
+
+    # ========================================================
+    # CONTROL 1 - SECURE REMOTE ACCESS
+    # ========================================================
+
+    - name: "[LINUX] Enforce disabled SSH root login"
+      ansible.builtin.copy:
+        dest: /etc/ssh/sshd_config.d/99-aap-compliance.conf
+        content: |
+          PermitRootLogin no
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart SSH
+
+
+    # ========================================================
+    # CONTROL 2 - HOST FIREWALL
+    # ========================================================
+
+    - name: "[LINUX] Ensure firewalld is installed"
+      ansible.builtin.package:
+        name: firewalld
+        state: present
+
+    - name: "[LINUX] Ensure firewalld is enabled and running"
+      ansible.builtin.service:
+        name: firewalld
+        enabled: true
+        state: started
+
+
+    # ========================================================
+    # CONTROL 3 - TIME SYNCHRONIZATION
+    # ========================================================
+
+    - name: "[LINUX] Ensure Chrony is installed"
+      ansible.builtin.package:
+        name: chrony
+        state: present
+
+    - name: "[LINUX] Ensure Chrony is enabled and running"
+      ansible.builtin.service:
+        name: chronyd
+        enabled: true
+        state: started
+
+
+    # ========================================================
+    # REMEDIATION SUMMARY
+    # ========================================================
+
+    - name: "[LINUX] Display remediation summary"
+      ansible.builtin.debug:
+        msg:
+          - "============================================"
+          - "LINUX COMPLIANCE REMEDIATION"
+          - "============================================"
+          - "Host: {{ inventory_hostname }}"
+          - "Platform: {{ ansible_distribution }}"
+          - ""
+          - "Secure Remote Access: ENFORCED"
+          - "Host Firewall: ENFORCED"
+          - "Time Synchronization: ENFORCED"
+          - "============================================"
+
+  handlers:
+
+    - name: Restart SSH
+      ansible.builtin.service:
+        name: sshd
+        state: restarted
