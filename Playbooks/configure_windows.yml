@@ -3,11 +3,11 @@
   hosts: windows
   gather_facts: true
 
-  become: true
-  become_method: runas
-  become_user: Administrator
-
   tasks:
+
+    # ---------------------------------------------------------
+    # Validate Windows host
+    # ---------------------------------------------------------
 
     - name: Show hostname
       ansible.builtin.debug:
@@ -16,39 +16,18 @@
     - name: Show operating system
       ansible.builtin.debug:
         var: ansible_distribution
-   
+
     - name: Show Ansible Windows user
       ansible.windows.win_whoami:
       register: windows_identity
 
     - name: Display Windows identity
       ansible.builtin.debug:
-        var: windows_identity
+        var: windows_identity.account.account_name
 
-    - name: Test PowerShell process creation
-      ansible.windows.win_shell: |
-        $p = Start-Process -FilePath "cmd.exe" -ArgumentList "/c echo PROCESS_TEST" -Wait -PassThru
-        Write-Output "ExitCode: $($p.ExitCode)"
-      args:
-        executable: powershell.exe    
-
-    - name: Check whether Chocolatey is installed
-      ansible.windows.win_command: choco --version
-      register: choco_version
-      changed_when: false
-
-    - name: Display Chocolatey version
-      ansible.builtin.debug:
-        var: choco_version.stdout
-
-    - name: List installed Chocolatey packages
-      ansible.windows.win_command: choco list
-      register: choco_packages
-      changed_when: false
-
-    - name: Display installed Chocolatey packages
-      ansible.builtin.debug:
-        var: choco_packages.stdout
+    # ---------------------------------------------------------
+    # Configure application
+    # ---------------------------------------------------------
 
     - name: Install Apache
       chocolatey.chocolatey.win_chocolatey:
@@ -61,13 +40,21 @@
         state: started
         start_mode: auto
 
-    - name: Verify Apache service
+    # ---------------------------------------------------------
+    # Validate application
+    # ---------------------------------------------------------
+
+    - name: Get Apache service information
       ansible.windows.win_service:
         name: Apache2.4
       register: apache_service
 
+    # ---------------------------------------------------------
+    # Retrieve EC2 metadata from Windows
+    # ---------------------------------------------------------
+
     - name: Get EC2 metadata token
-      ansible.builtin.uri:
+      ansible.windows.win_uri:
         url: http://169.254.169.254/latest/api/token
         method: PUT
         headers:
@@ -76,13 +63,17 @@
       register: ec2_metadata_token
 
     - name: Get EC2 public IPv4
-      ansible.builtin.uri:
+      ansible.windows.win_uri:
         url: http://169.254.169.254/latest/meta-data/public-ipv4
         method: GET
         headers:
           X-aws-ec2-metadata-token: "{{ ec2_metadata_token.content }}"
         return_content: true
       register: ec2_public_ip
+
+    # ---------------------------------------------------------
+    # Demo output
+    # ---------------------------------------------------------
 
     - name: Display server information
       ansible.builtin.debug:
