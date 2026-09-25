@@ -4,3 +4,4 @@ collections:
     version: 2.13.2
   - name: ansible.posix
   - name: ansible.windows
+  - name: chocolatey.chocolatey
