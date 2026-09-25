@@ -3,6 +3,7 @@ version: 3
 
 dependencies:
   galaxy: requirements.yml
+  python: requirements.txt
 
 images:
   base_image:

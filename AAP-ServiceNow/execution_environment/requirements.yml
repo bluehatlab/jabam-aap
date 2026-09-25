@@ -3,3 +3,4 @@ collections:
   - name: servicenow.itsm
     version: 2.13.2
   - name: ansible.posix
+  - name: ansible.windows
