@@ -36,7 +36,7 @@
 
     - name: Start Apache
       ansible.windows.win_service:
-        name: Apache2.4
+        name: Apache
         state: started
         start_mode: auto
 
@@ -46,7 +46,7 @@
 
     - name: Get Apache service information
       ansible.windows.win_service:
-        name: Apache2.4
+        name: Apache
       register: apache_service
 
     # ---------------------------------------------------------
