@@ -1,17 +1,16 @@
 ---
-- name: Configure Windows
+- name: Configure Windows Compute
   hosts: windows
   gather_facts: true
-
-  become: true
-  become_method: runas
-  become_user: Administrator
 
   tasks:
 
     # ---------------------------------------------------------
-    # Validate Windows host
+    # 1. Verify Windows connectivity / identity
     # ---------------------------------------------------------
+
+    - name: Verify WinRM connectivity
+      ansible.windows.win_ping:
 
     - name: Show hostname
       ansible.builtin.debug:
@@ -19,7 +18,9 @@
 
     - name: Show operating system
       ansible.builtin.debug:
-        var: ansible_distribution
+        msg:
+          - "OS: {{ ansible_distribution }}"
+          - "Version: {{ ansible_distribution_version }}"
 
     - name: Show Ansible Windows user
       ansible.windows.win_whoami:
@@ -27,31 +28,19 @@
 
     - name: Display Windows identity
       ansible.builtin.debug:
-        var: windows_identity
+        var: windows_identity.account.account_name
 
 
     # ---------------------------------------------------------
-    # Validate PowerShell execution
+    # 2. Install package management
     # ---------------------------------------------------------
 
-    - name: Test PowerShell process creation
-      ansible.windows.win_shell: |
-        $p = Start-Process `
-          -FilePath "cmd.exe" `
-          -ArgumentList "/c echo PROCESS_TEST" `
-          -Wait `
-          -PassThru
+    - name: Ensure Chocolatey is installed
+      chocolatey.chocolatey.win_chocolatey:
+        name: chocolatey
+        state: present
 
-        Write-Output "ExitCode: $($p.ExitCode)"
-      args:
-        executable: powershell.exe
-
-
-    # ---------------------------------------------------------
-    # Validate Chocolatey
-    # ---------------------------------------------------------
-
-    - name: Check whether Chocolatey is installed
+    - name: Get Chocolatey version
       ansible.windows.win_command: choco --version
       register: choco_version
       changed_when: false
@@ -60,80 +49,73 @@
       ansible.builtin.debug:
         var: choco_version.stdout
 
-    - name: List installed Chocolatey packages
-      ansible.windows.win_command: choco list
-      register: choco_packages
-      changed_when: false
-
-    - name: Display installed Chocolatey packages
-      ansible.builtin.debug:
-        var: choco_packages.stdout
-
 
     # ---------------------------------------------------------
-    # Install and configure Apache
+    # 3. Configure application
     # ---------------------------------------------------------
 
-    - name: Install Apache
+    - name: Ensure Apache is installed
       chocolatey.chocolatey.win_chocolatey:
         name: apache-httpd
         state: present
 
-    - name: Start Apache
+    - name: Ensure Apache is running and enabled
       ansible.windows.win_service:
         name: Apache
         state: started
         start_mode: auto
 
-    - name: Verify Apache service
+    - name: Get Apache service information
       ansible.windows.win_service:
         name: Apache
       register: apache_service
 
 
     # ---------------------------------------------------------
-    # Retrieve AWS EC2 metadata
+    # 4. Get Windows networking information
     # ---------------------------------------------------------
 
-    - name: Get EC2 metadata token
+    - name: Get private IPv4 address
+      ansible.windows.win_shell: |
+        Get-NetIPAddress -AddressFamily IPv4 |
+          Where-Object {
+            $_.IPAddress -notlike '127.*' -and
+            $_.IPAddress -notlike '169.254.*'
+          } |
+          Select-Object -First 1 -ExpandProperty IPAddress
+      register: private_ip
+      changed_when: false
+
+    - name: Get EC2 IMDSv2 token
       ansible.windows.win_uri:
         url: http://169.254.169.254/latest/api/token
         method: PUT
         headers:
           X-aws-ec2-metadata-token-ttl-seconds: "21600"
         return_content: true
-      register: ec2_metadata_token
+      register: metadata_token
 
-    - name: Get EC2 private IPv4
-      ansible.windows.win_uri:
-        url: http://169.254.169.254/latest/meta-data/local-ipv4
-        method: GET
-        headers:
-          X-aws-ec2-metadata-token: "{{ ec2_metadata_token.content }}"
-        return_content: true
-      register: ec2_private_ip
-
-    - name: Get EC2 public IPv4
+    - name: Get EC2 public IPv4 address
       ansible.windows.win_uri:
         url: http://169.254.169.254/latest/meta-data/public-ipv4
         method: GET
         headers:
-          X-aws-ec2-metadata-token: "{{ ec2_metadata_token.content }}"
+          X-aws-ec2-metadata-token: "{{ metadata_token.content }}"
         return_content: true
-      register: ec2_public_ip
+      register: public_ip
 
 
     # ---------------------------------------------------------
-    # Final report
+    # 5. Display final desired state
     # ---------------------------------------------------------
 
-    - name: Display server information
+    - name: Display Windows server information
       ansible.builtin.debug:
         msg:
           - "OS: {{ ansible_distribution }}"
           - "Version: {{ ansible_distribution_version }}"
           - "Hostname: {{ ansible_hostname }}"
-          - "Private IP: {{ ec2_private_ip.content }}"
-          - "Public IPv4: {{ ec2_public_ip.content }}"
+          - "Private IPv4: {{ private_ip.stdout | trim }}"
+          - "Public IPv4: {{ public_ip.content | trim }}"
           - "Chocolatey: {{ choco_version.stdout | trim }}"
           - "Apache: {{ apache_service.state }}"
