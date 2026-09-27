@@ -5,3 +5,4 @@ collections:
   - name: ansible.posix
   - name: ansible.windows
   - name: chocolatey.chocolatey
+  - name: paloaltonetworks.panos

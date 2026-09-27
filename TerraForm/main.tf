@@ -326,3 +326,68 @@ EOF
     Role = "compute"
   }
 }
+
+# ------------------------------------------------------------
+# PAN-OS VM-Series ARM PAYG
+# ------------------------------------------------------------
+
+resource "aws_security_group" "panos_management" {
+  name        = "terr-demo-panos-management"
+  description = "PAN-OS management access"
+  vpc_id      = aws_vpc.demo.id
+
+  ingress {
+    description = "PAN-OS HTTPS management"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "PAN-OS SSH management"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "terr-demo-panos-management"
+  }
+}
+
+resource "aws_instance" "panos" {
+  ami           = "ami-0c618c1c79e38428e"
+  instance_type = "m6g.large"
+
+  subnet_id                   = aws_subnet.demo.id
+  associate_public_ip_address = true
+
+  vpc_security_group_ids = [
+    aws_security_group.panos_management.id
+  ]
+
+  key_name = aws_key_pair.demo.key_name
+
+  source_dest_check = false
+
+  tags = {
+    Name    = "terr-demo-panos"
+    Role    = "network"
+    OS      = "panos"
+    Service = "firewall"
+  }
+}
+
+output "panos_management_public_ip" {
+  description = "Public management IP for PAN-OS"
+  value       = aws_instance.panos.public_ip
+}
