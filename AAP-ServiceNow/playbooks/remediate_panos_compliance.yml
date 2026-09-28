@@ -1,0 +1,36 @@
+---
+- name: Remediate PAN-OS Compliance
+  hosts: panos
+  gather_facts: false
+  connection: local
+
+  vars:
+    panos_provider:
+      ip_address: "{{ ansible_host }}"
+      username: "{{ panos_username }}"
+      password: "{{ panos_password }}"
+
+  tasks:
+    - name: Enforce PAN-OS management baseline
+      paloaltonetworks.panos.panos_mgtconfig:
+        provider: "{{ panos_provider }}"
+        hostname: "terr-demo-panos"
+        timezone: "US/Central"
+        dns_server_primary: "1.1.1.1"
+        dns_server_secondary: "8.8.8.8"
+        ntp_server_primary: "time.google.com"
+        ntp_server_secondary: "time.cloudflare.com"
+        login_banner: "Authorized access only - managed by Ansible Automation Platform"
+      register: remediation
+
+    - name: Commit remediation when configuration changed
+      paloaltonetworks.panos.panos_commit_firewall:
+        provider: "{{ panos_provider }}"
+      when: remediation.changed
+
+    - name: Display remediation result
+      ansible.builtin.debug:
+        msg: >-
+          {{ 'PAN-OS baseline remediated and committed.'
+             if remediation.changed
+             else 'PAN-OS already compliant. No remediation required.' }}
