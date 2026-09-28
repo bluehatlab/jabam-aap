@@ -1,0 +1,66 @@
+---
+- name: Assess PAN-OS Compliance
+  hosts: panos
+  gather_facts: false
+  connection: local
+
+  vars:
+    panos_provider:
+      ip_address: "{{ ansible_host }}"
+      username: "{{ panos_username }}"
+      password: "{{ panos_password }}"
+
+    baseline:
+      hostname: "terr-demo-panos"
+      timezone: "US/Central"
+      dns_primary: "1.1.1.1"
+      dns_secondary: "8.8.8.8"
+      ntp_primary: "time.google.com"
+      ntp_secondary: "time.cloudflare.com"
+
+  tasks:
+    - name: Retrieve PAN-OS management configuration
+      paloaltonetworks.panos.panos_op:
+        provider: "{{ panos_provider }}"
+        cmd: "show config running"
+      register: panos_config
+
+    - name: Check compliance controls
+      ansible.builtin.set_fact:
+        hostname_compliant: >-
+          {{ baseline.hostname in panos_config.stdout }}
+        timezone_compliant: >-
+          {{ baseline.timezone in panos_config.stdout }}
+        dns_primary_compliant: >-
+          {{ baseline.dns_primary in panos_config.stdout }}
+        dns_secondary_compliant: >-
+          {{ baseline.dns_secondary in panos_config.stdout }}
+        ntp_primary_compliant: >-
+          {{ baseline.ntp_primary in panos_config.stdout }}
+        ntp_secondary_compliant: >-
+          {{ baseline.ntp_secondary in panos_config.stdout }}
+
+    - name: Determine overall compliance
+      ansible.builtin.set_fact:
+        panos_compliant: >-
+          {{
+            hostname_compliant and
+            timezone_compliant and
+            dns_primary_compliant and
+            dns_secondary_compliant and
+            ntp_primary_compliant and
+            ntp_secondary_compliant
+          }}
+
+    - name: Display PAN-OS compliance report
+      ansible.builtin.debug:
+        msg:
+          - "========== PAN-OS COMPLIANCE REPORT =========="
+          - "Hostname:      {{ 'PASS' if hostname_compliant else 'FAIL' }}"
+          - "Timezone:      {{ 'PASS' if timezone_compliant else 'FAIL' }}"
+          - "Primary DNS:   {{ 'PASS' if dns_primary_compliant else 'FAIL' }}"
+          - "Secondary DNS: {{ 'PASS' if dns_secondary_compliant else 'FAIL' }}"
+          - "Primary NTP:   {{ 'PASS' if ntp_primary_compliant else 'FAIL' }}"
+          - "Secondary NTP: {{ 'PASS' if ntp_secondary_compliant else 'FAIL' }}"
+          - "----------------------------------------------"
+          - "Overall: {{ 'COMPLIANT' if panos_compliant else 'NON-COMPLIANT' }}"
