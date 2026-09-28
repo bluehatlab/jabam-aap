@@ -1,0 +1,35 @@
+---
+- name: Configure PAN-OS Management Baseline
+  hosts: panos
+  gather_facts: false
+  connection: local
+
+  vars:
+    panos_provider:
+      ip_address: "{{ ansible_host }}"
+      username: "{{ panos_username }}"
+      password: "{{ panos_password }}"
+
+  tasks:
+    - name: Wait until PAN-OS is ready
+      paloaltonetworks.panos.panos_check:
+        provider: "{{ panos_provider }}"
+      register: panos_ready
+      until: panos_ready is succeeded
+      retries: 10
+      delay: 5
+
+    - name: Configure PAN-OS management baseline
+      paloaltonetworks.panos.panos_mgtconfig:
+        provider: "{{ panos_provider }}"
+        hostname: "terr-demo-panos"
+        timezone: "US/Central"
+        dns_server_primary: "1.1.1.1"
+        dns_server_secondary: "8.8.8.8"
+        ntp_server_primary: "time.google.com"
+        ntp_server_secondary: "time.cloudflare.com"
+        login_banner: "Authorized access only - managed by Ansible Automation Platform"
+
+    - name: Commit PAN-OS configuration
+      paloaltonetworks.panos.panos_commit_firewall:
+        provider: "{{ panos_provider }}"
