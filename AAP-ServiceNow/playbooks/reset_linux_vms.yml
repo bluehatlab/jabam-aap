@@ -1,0 +1,37 @@
+---
+# ============================================================
+# RESET LINUX DEMO STATE
+# RHEL + Amazon Linux
+# ============================================================
+
+- name: Reset Linux machines to non-compliant demo state
+  hosts: "rhel:amazon"
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Allow SSH root login
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin yes'
+        backup: true
+      notify: Restart SSH
+
+    - name: Stop and disable firewalld
+      ansible.builtin.systemd:
+        name: firewalld
+        state: stopped
+        enabled: false
+
+    - name: Stop and disable chronyd
+      ansible.builtin.systemd:
+        name: chronyd
+        state: stopped
+        enabled: false
+
+  handlers:
+    - name: Restart SSH
+      ansible.builtin.systemd:
+        name: sshd
+        state: restarted
