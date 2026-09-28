@@ -1,0 +1,26 @@
+---
+- name: Verify PAN-OS Connectivity
+  hosts: panos
+  gather_facts: false
+  connection: local
+
+  vars:
+    panos_provider:
+      ip_address: "{{ ansible_host }}"
+      username: "{{ panos_username }}"
+      password: "{{ panos_password }}"
+
+  tasks:
+    - name: Gather PAN-OS system information
+      paloaltonetworks.panos.panos_facts:
+        provider: "{{ panos_provider }}"
+        gather_subset:
+          - system
+
+    - name: Display PAN-OS system information
+      ansible.builtin.debug:
+        msg:
+          - "Hostname: {{ ansible_facts['net_hostname'] | default('Unavailable') }}"
+          - "Model: {{ ansible_facts['net_model'] | default('Unavailable') }}"
+          - "Serial: {{ ansible_facts['net_serial'] | default('Unavailable') }}"
+          - "Version: {{ ansible_facts['net_version'] | default('Unavailable') }}"
