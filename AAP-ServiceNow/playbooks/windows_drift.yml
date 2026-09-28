@@ -1,0 +1,62 @@
+---
+- name: Introduce obvious Windows compliance drift
+  hosts: windows
+  gather_facts: false
+
+  tasks:
+    - name: Disable all Windows Firewall profiles
+      ansible.windows.win_powershell:
+        script: |
+          Set-NetFirewallProfile `
+            -Profile Domain,Private,Public `
+            -Enabled False
+
+    - name: Disable automatic Windows Update
+      ansible.windows.win_powershell:
+        script: |
+          $path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU"
+
+          if (-not (Test-Path $path)) {
+              New-Item -Path $path -Force | Out-Null
+          }
+
+          New-ItemProperty `
+            -Path $path `
+            -Name "NoAutoUpdate" `
+            -PropertyType DWord `
+            -Value 1 `
+            -Force | Out-Null
+
+    - name: Disable RDP Network Level Authentication
+      ansible.windows.win_powershell:
+        script: |
+          $path = "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp"
+
+          Set-ItemProperty `
+            -Path $path `
+            -Name "UserAuthentication" `
+            -Value 0
+
+    - name: Verify drift was introduced
+      ansible.windows.win_powershell:
+        script: |
+          $fw = Get-NetFirewallProfile |
+            Select-Object Name, Enabled
+
+          $wuPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU"
+          $rdpPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp"
+
+          Write-Output "===== INTENTIONAL WINDOWS DRIFT ====="
+          Write-Output ""
+          Write-Output "WINDOWS FIREWALL:"
+          $fw | Format-Table -AutoSize | Out-String | Write-Output
+
+          Write-Output "WINDOWS UPDATE:"
+          Write-Output "NoAutoUpdate = $((Get-ItemProperty -Path $wuPath -Name NoAutoUpdate).NoAutoUpdate)"
+
+          Write-Output ""
+          Write-Output "RDP NETWORK LEVEL AUTHENTICATION:"
+          Write-Output "UserAuthentication = $((Get-ItemProperty -Path $rdpPath -Name UserAuthentication).UserAuthentication)"
+
+          Write-Output ""
+          Write-Output "Windows host intentionally placed into NON-COMPLIANT demo state."

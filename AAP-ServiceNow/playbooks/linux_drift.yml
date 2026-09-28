@@ -1,0 +1,84 @@
+---
+- name: Introduce obvious Linux compliance drift
+  hosts: "rhel:amazon_linux"
+  become: true
+  gather_facts: true
+
+  tasks:
+    # ---------------------------------------------------------
+    # 1. SSH ROOT LOGIN DRIFT
+    # ---------------------------------------------------------
+
+    - name: Enable SSH root login
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin yes'
+        backup: true
+      notify: Restart SSH
+
+    # ---------------------------------------------------------
+    # 2. FIREWALL DRIFT
+    # ---------------------------------------------------------
+
+    - name: Stop and disable firewalld
+      ansible.builtin.systemd:
+        name: firewalld
+        state: stopped
+        enabled: false
+
+    # ---------------------------------------------------------
+    # 3. TIME SYNCHRONIZATION DRIFT
+    # ---------------------------------------------------------
+
+    - name: Stop and disable chronyd
+      ansible.builtin.systemd:
+        name: chronyd
+        state: stopped
+        enabled: false
+
+    # Apply SSH configuration before verification
+    - name: Apply pending handlers
+      ansible.builtin.meta: flush_handlers
+
+    # ---------------------------------------------------------
+    # VERIFY INTENTIONAL DRIFT
+    # ---------------------------------------------------------
+
+    - name: Check SSH root login configuration
+      ansible.builtin.command:
+        cmd: sshd -T
+      register: sshd_config
+      changed_when: false
+
+    - name: Check firewalld state
+      ansible.builtin.command:
+        cmd: systemctl is-active firewalld
+      register: firewalld_state
+      changed_when: false
+      failed_when: false
+
+    - name: Check chronyd state
+      ansible.builtin.command:
+        cmd: systemctl is-active chronyd
+      register: chronyd_state
+      changed_when: false
+      failed_when: false
+
+    - name: Display intentional Linux drift
+      ansible.builtin.debug:
+        msg:
+          - "========== INTENTIONAL LINUX DRIFT =========="
+          - "Host: {{ inventory_hostname }}"
+          - "OS: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+          - "SSH Root Login: {{ 'ENABLED - NON-COMPLIANT' if 'permitrootlogin yes' in (sshd_config.stdout | lower) else 'CHECK REQUIRED' }}"
+          - "Firewalld: {{ firewalld_state.stdout | upper }} - NON-COMPLIANT"
+          - "Chronyd: {{ chronyd_state.stdout | upper }} - NON-COMPLIANT"
+          - "============================================="
+          - "Host intentionally placed into NON-COMPLIANT demo state."
+
+  handlers:
+    - name: Restart SSH
+      ansible.builtin.systemd:
+        name: sshd
+        state: restarted
