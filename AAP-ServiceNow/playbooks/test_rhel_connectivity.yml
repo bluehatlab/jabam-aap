@@ -1,6 +1,6 @@
 ---
 - name: Test AWS RHEL connectivity
-  hosts: ec2-98-89-5-15.compute-1.amazonaws.com
+  hosts: rhel
   gather_facts: true
 
   tasks:
