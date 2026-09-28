@@ -1,0 +1,78 @@
+---
+# ============================================================
+# RESET LINUX DEMO STATE
+# RHEL + Amazon Linux
+# ============================================================
+
+- name: Reset Linux machines to non-compliant demo state
+  hosts: "rhel:amazon"
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Allow SSH root login
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin yes'
+        backup: true
+      notify: Restart SSH
+
+    - name: Stop and disable firewalld
+      ansible.builtin.systemd:
+        name: firewalld
+        state: stopped
+        enabled: false
+
+    - name: Stop and disable chronyd
+      ansible.builtin.systemd:
+        name: chronyd
+        state: stopped
+        enabled: false
+
+  handlers:
+    - name: Restart SSH
+      ansible.builtin.systemd:
+        name: sshd
+        state: restarted
+
+
+# ============================================================
+# RESET WINDOWS DEMO STATE
+# ============================================================
+
+- name: Reset Windows machine to non-compliant demo state
+  hosts: windows
+  gather_facts: false
+
+  tasks:
+    - name: Disable Windows Firewall profiles
+      ansible.windows.win_powershell:
+        script: |
+          Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False
+
+    - name: Disable automatic Windows Update
+      ansible.windows.win_powershell:
+        script: |
+          $path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU"
+
+          if (-not (Test-Path $path)) {
+              New-Item -Path $path -Force | Out-Null
+          }
+
+          New-ItemProperty `
+            -Path $path `
+            -Name "NoAutoUpdate" `
+            -PropertyType DWord `
+            -Value 1 `
+            -Force | Out-Null
+
+    - name: Disable RDP Network Level Authentication
+      ansible.windows.win_powershell:
+        script: |
+          $path = "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp"
+
+          Set-ItemProperty `
+            -Path $path `
+            -Name "UserAuthentication" `
+            -Value 0
