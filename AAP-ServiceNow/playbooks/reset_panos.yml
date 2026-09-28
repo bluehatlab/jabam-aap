@@ -1,0 +1,46 @@
+---
+- name: Reset PAN-OS Demo Configuration
+  hosts: panos
+  gather_facts: false
+  connection: local
+
+  vars:
+    panos_provider:
+      ip_address: "{{ ansible_host }}"
+      username: "{{ panos_username }}"
+      password: "{{ panos_password }}"
+
+  tasks:
+    - name: Wait until PAN-OS is ready
+      paloaltonetworks.panos.panos_check:
+        provider: "{{ panos_provider }}"
+
+    - name: Reset PAN-OS management settings for demo
+      paloaltonetworks.panos.panos_mgtconfig:
+        provider: "{{ panos_provider }}"
+
+        # Deliberately different from our compliant baseline
+        hostname: "PA-VM"
+        timezone: "UTC"
+
+        # Non-baseline values for demo reset
+        dns_server_primary: "8.8.8.8"
+        dns_server_secondary: "8.8.4.4"
+
+        ntp_server_primary: "pool.ntp.org"
+        ntp_server_secondary: "time.nist.gov"
+
+        login_banner: "PAN-OS Demo - Unmanaged State"
+      register: reset_result
+
+    - name: Commit reset configuration
+      paloaltonetworks.panos.panos_commit_firewall:
+        provider: "{{ panos_provider }}"
+      when: reset_result.changed
+
+    - name: Display reset status
+      ansible.builtin.debug:
+        msg: >-
+          {{ 'PAN-OS returned to pre-demo unmanaged state.'
+             if reset_result.changed
+             else 'PAN-OS was already in the pre-demo state.' }}
