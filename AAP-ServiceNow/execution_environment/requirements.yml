@@ -6,3 +6,4 @@ collections:
   - name: ansible.windows
   - name: chocolatey.chocolatey
   - name: paloaltonetworks.panos
+  - name: amazon.aws
