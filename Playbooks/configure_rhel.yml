@@ -37,14 +37,14 @@
         return_content: true
       register: imds_token
 
-    # - name: Get EC2 public IPv4
-    #   ansible.builtin.uri:
-    #     url: http://169.254.169.254/latest/meta-data/public-ipv4
-    #     method: GET
-    #     headers:
-    #       X-aws-ec2-metadata-token: "{{ imds_token.content }}"
-    #     return_content: true
-    #   register: ec2_public_ip
+    - name: Get EC2 public IPv4
+      ansible.builtin.uri:
+        url: http://169.254.169.254/latest/meta-data/public-ipv4
+        method: GET
+        headers:
+          X-aws-ec2-metadata-token: "{{ imds_token.content }}"
+        return_content: true
+      register: ec2_public_ip
 
     - name: Display RHEL information
       ansible.builtin.debug:
