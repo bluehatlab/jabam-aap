@@ -51,3 +51,20 @@
 
         state: present
         enabled: true
+
+    - name: Verify scheduled task configuration
+      ansible.windows.win_powershell:
+        script: |
+          $task = Get-ScheduledTask -TaskName "AAP-Maintenance"
+
+          Write-Output "===== SCHEDULED TASK VERIFICATION ====="
+          Write-Output "Task Name: $($task.TaskName)"
+          Write-Output "State: $($task.State)"
+          Write-Output "Executable: $($task.Actions.Execute)"
+          Write-Output "Arguments: $($task.Actions.Arguments)"
+
+          $info = Get-ScheduledTaskInfo -TaskName "AAP-Maintenance"
+
+          Write-Output "Last Run: $($info.LastRunTime)"
+          Write-Output "Next Run: $($info.NextRunTime)"
+          Write-Output "Last Result: $($info.LastTaskResult)"
