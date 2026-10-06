@@ -1,46 +1,70 @@
 ---
-- name: Configure Windows scheduled maintenance
+- name: Configure and verify Windows scheduled maintenance
   hosts: windows
   gather_facts: false
 
   tasks:
 
-    # ---------------------------------------------------------
-    # 1. Deploy the PowerShell maintenance script
-    # ---------------------------------------------------------
+    # =========================================================
+    # 1. Deploy PowerShell maintenance script
+    # =========================================================
 
     - name: Deploy PowerShell maintenance script
       ansible.windows.win_copy:
         content: |
           $Timestamp = Get-Date
 
-          "===== AAP WINDOWS MAINTENANCE =====" |
+          "==========================================" |
             Out-File C:\maintenance-report.txt
+
+          "       AAP WINDOWS MAINTENANCE REPORT" |
+            Out-File C:\maintenance-report.txt -Append
+
+          "==========================================" |
+            Out-File C:\maintenance-report.txt -Append
+
+          "Hostname: $env:COMPUTERNAME" |
+            Out-File C:\maintenance-report.txt -Append
 
           "Run time: $Timestamp" |
             Out-File C:\maintenance-report.txt -Append
 
-          "`nStopped Services:" |
+
+          "`n===== STOPPED SERVICES =====" |
             Out-File C:\maintenance-report.txt -Append
 
           Get-Service |
             Where-Object {$_.Status -eq "Stopped"} |
-            Select-Object Name, Status |
+            Select-Object Name, DisplayName, Status |
+            Format-Table -AutoSize |
+            Out-String |
             Out-File C:\maintenance-report.txt -Append
 
-          "`nDisk Information:" |
+
+          "`n===== DISK INFORMATION =====" |
             Out-File C:\maintenance-report.txt -Append
 
-          Get-PSDrive C |
-            Select-Object Used, Free |
+          Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'" |
+            Select-Object DeviceID,
+              @{Name="SizeGB";Expression={[math]::Round($_.Size/1GB,2)}},
+              @{Name="FreeGB";Expression={[math]::Round($_.FreeSpace/1GB,2)}},
+              @{Name="UsedGB";Expression={
+                [math]::Round(($_.Size-$_.FreeSpace)/1GB,2)
+              }} |
+            Format-Table -AutoSize |
+            Out-String |
+            Out-File C:\maintenance-report.txt -Append
+
+
+          "`n===== MAINTENANCE COMPLETE =====" |
             Out-File C:\maintenance-report.txt -Append
 
         dest: C:\maintenance.ps1
 
 
-    # ---------------------------------------------------------
-    # 2. Create the Windows Scheduled Task
-    # ---------------------------------------------------------
+    # =========================================================
+    # 2. Create Windows scheduled task
+    # =========================================================
 
     - name: Create scheduled maintenance task
       community.windows.win_scheduled_task:
@@ -62,82 +86,129 @@
         enabled: true
 
 
-    # ---------------------------------------------------------
-    # 3. Verify the task exists and is configured correctly
-    # ---------------------------------------------------------
+    # =========================================================
+    # 3. Verify scheduled task configuration
+    # =========================================================
 
     - name: Verify scheduled task configuration
-      ansible.windows.win_powershell:
-        script: |
-          $task = Get-ScheduledTask -TaskName "AAP-Maintenance"
-          $info = Get-ScheduledTaskInfo -TaskName "AAP-Maintenance"
+      ansible.windows.win_shell: |
+        $task = Get-ScheduledTask -TaskName "AAP-Maintenance"
+        $info = Get-ScheduledTaskInfo -TaskName "AAP-Maintenance"
 
-          Write-Output "===== SCHEDULED TASK VERIFICATION ====="
-          Write-Output "Task Name: $($task.TaskName)"
-          Write-Output "State: $($task.State)"
-          Write-Output "Executable: $($task.Actions.Execute)"
-          Write-Output "Arguments: $($task.Actions.Arguments)"
-          Write-Output "Last Run: $($info.LastRunTime)"
-          Write-Output "Next Run: $($info.NextRunTime)"
-          Write-Output "Last Result: $($info.LastTaskResult)"
-
-
-    # ---------------------------------------------------------
-    # 4. Trigger the scheduled task immediately for the demo
-    # ---------------------------------------------------------
-
-    - name: Run maintenance task now
-      ansible.windows.win_powershell:
-        script: |
-          Write-Output "Starting AAP-Maintenance..."
-
-          Start-ScheduledTask -TaskName "AAP-Maintenance"
-
-          # Wait for the task to finish
-          $timeout = 30
-          $elapsed = 0
-
-          do {
-              Start-Sleep -Seconds 2
-              $elapsed += 2
-              $state = (Get-ScheduledTask -TaskName "AAP-Maintenance").State
-          }
-          while ($state -eq "Running" -and $elapsed -lt $timeout)
-
-          Write-Output "Task state: $state"
-
-          $info = Get-ScheduledTaskInfo -TaskName "AAP-Maintenance"
-
-          Write-Output "Last Run: $($info.LastRunTime)"
-          Write-Output "Last Result: $($info.LastTaskResult)"
-
-          if ($info.LastTaskResult -ne 0) {
-              throw "AAP-Maintenance did not complete successfully."
-          }
+        Write-Output "===== SCHEDULED TASK VERIFICATION ====="
+        Write-Output "Task Name: $($task.TaskName)"
+        Write-Output "State: $($task.State)"
+        Write-Output "Executable: $($task.Actions.Execute)"
+        Write-Output "Arguments: $($task.Actions.Arguments)"
+        Write-Output "Last Run: $($info.LastRunTime)"
+        Write-Output "Next Run: $($info.NextRunTime)"
+        Write-Output "Last Result: $($info.LastTaskResult)"
+      register: scheduled_task_info
+      changed_when: false
 
 
-    # ---------------------------------------------------------
-    # 5. Verify and display the maintenance report
-    # ---------------------------------------------------------
+    - name: Display scheduled task configuration
+      ansible.builtin.debug:
+        var: scheduled_task_info.stdout_lines
+
+
+    # =========================================================
+    # 4. Run scheduled task immediately for demo
+    # =========================================================
+
+    - name: Trigger Windows maintenance task
+      ansible.windows.win_shell: |
+        Start-ScheduledTask -TaskName "AAP-Maintenance"
+
+        $timeout = 30
+        $elapsed = 0
+
+        do {
+
+          Start-Sleep -Seconds 2
+          $elapsed += 2
+
+          $state = (
+            Get-ScheduledTask -TaskName "AAP-Maintenance"
+          ).State
+
+        }
+        while ($state -eq "Running" -and $elapsed -lt $timeout)
+
+        $info = Get-ScheduledTaskInfo -TaskName "AAP-Maintenance"
+
+        Write-Output "===== EXECUTION RESULT ====="
+        Write-Output "Task State: $state"
+        Write-Output "Last Run: $($info.LastRunTime)"
+        Write-Output "Last Result: $($info.LastTaskResult)"
+
+        if ($state -eq "Running") {
+          throw "AAP-Maintenance exceeded the execution timeout."
+        }
+
+        if ($info.LastTaskResult -ne 0) {
+          throw "AAP-Maintenance failed with result $($info.LastTaskResult)"
+        }
+
+      register: execution_result
+      changed_when: false
+
+
+    - name: Display execution result
+      ansible.builtin.debug:
+        var: execution_result.stdout_lines
+
+
+    # =========================================================
+    # 5. Verify maintenance report exists
+    # =========================================================
+
+    - name: Check maintenance report
+      ansible.windows.win_stat:
+        path: C:\maintenance-report.txt
+      register: maintenance_file
+
+
+    - name: Fail if maintenance report was not created
+      ansible.builtin.fail:
+        msg: >
+          FAILED: C:\maintenance-report.txt was not created
+          by the scheduled maintenance task.
+      when: not maintenance_file.stat.exists
+
+
+    # =========================================================
+    # 6. Read maintenance report from Windows
+    # =========================================================
+
+    - name: Read Windows maintenance report
+      ansible.windows.win_shell: |
+        Get-Content C:\maintenance-report.txt
+      register: maintenance_report
+      changed_when: false
+
+
+    # =========================================================
+    # 7. Display maintenance report in AAP
+    # =========================================================
 
     - name: Display Windows maintenance report
-      ansible.windows.win_powershell:
-        script: |
-          Write-Output ""
-          Write-Output "=========================================="
-          Write-Output "      WINDOWS MAINTENANCE REPORT"
-          Write-Output "=========================================="
+      ansible.builtin.debug:
+        var: maintenance_report.stdout_lines
 
-          if (Test-Path "C:\maintenance-report.txt") {
 
-              Write-Output "PASS: Maintenance report was created."
-              Write-Output ""
+    # =========================================================
+    # 8. Final verification
+    # =========================================================
 
-              Get-Content "C:\maintenance-report.txt"
-
-          }
-          else {
-
-              throw "FAIL: C:\maintenance-report.txt was not created."
-
-          }
+    - name: Maintenance verification passed
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "WINDOWS MAINTENANCE VERIFICATION: PASS"
+          - "=========================================="
+          - "Scheduled task exists: PASS"
+          - "Scheduled task execution: PASS"
+          - "PowerShell script execution: PASS"
+          - "Maintenance report created: PASS"
+          - "Maintenance report retrieved by AAP: PASS"
