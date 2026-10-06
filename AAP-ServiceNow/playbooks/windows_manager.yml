@@ -4,18 +4,39 @@
   gather_facts: false
 
   tasks:
+
     - name: Deploy PowerShell maintenance script
       ansible.windows.win_copy:
         content: |
+          $Timestamp = Get-Date
+
+          "===== AAP WINDOWS MAINTENANCE =====" |
+            Out-File C:\maintenance-report.txt
+
+          "Run time: $Timestamp" |
+            Out-File C:\maintenance-report.txt -Append
+
+          "`nStopped Services:" |
+            Out-File C:\maintenance-report.txt -Append
+
           Get-Service |
-          Where-Object {$_.Status -eq "Stopped"} |
-          Out-File C:\maintenance-report.txt
+            Where-Object {$_.Status -eq "Stopped"} |
+            Select-Object Name, Status |
+            Out-File C:\maintenance-report.txt -Append
+
+          "`nDisk Information:" |
+            Out-File C:\maintenance-report.txt -Append
+
+          Get-PSDrive C |
+            Select-Object Used, Free |
+            Out-File C:\maintenance-report.txt -Append
+
         dest: C:\maintenance.ps1
 
-    - name: Create scheduled task
-      ansible.windows.win_scheduled_task:
+    - name: Create scheduled maintenance task
+      community.windows.win_scheduled_task:
         name: AAP-Maintenance
-        description: "Automated maintenance deployed by AAP"
+        description: Automated Windows maintenance managed by AAP
 
         actions:
           - path: powershell.exe
@@ -27,5 +48,6 @@
 
         username: SYSTEM
         run_level: highest
+
         state: present
         enabled: true

@@ -7,5 +7,4 @@ collections:
   - name: chocolatey.chocolatey
   - name: paloaltonetworks.panos
   - name: amazon.aws
-  - name: ansible.windows
   - name: community.windows
