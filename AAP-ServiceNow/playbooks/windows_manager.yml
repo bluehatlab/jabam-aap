@@ -1,10 +1,9 @@
 ---
-- name: Configure Windows scheduled maintenance to report stopped services
+- name: Configure Windows scheduled maintenance
   hosts: windows
   gather_facts: false
 
   tasks:
-
     - name: Deploy PowerShell maintenance script
       ansible.windows.win_copy:
         content: |
@@ -14,15 +13,13 @@
         dest: C:\maintenance.ps1
 
     - name: Create scheduled task
-      community.windows.win_scheduled_task:
+      ansible.windows.win_scheduled_task:
         name: AAP-Maintenance
         description: "Automated maintenance deployed by AAP"
 
         actions:
           - path: powershell.exe
-            arguments: >
-              -ExecutionPolicy Bypass
-              -File C:\maintenance.ps1
+            arguments: '-ExecutionPolicy Bypass -File C:\maintenance.ps1'
 
         triggers:
           - type: daily
