@@ -5,6 +5,10 @@
 
   tasks:
 
+    # ---------------------------------------------------------
+    # 1. Deploy the PowerShell maintenance script
+    # ---------------------------------------------------------
+
     - name: Deploy PowerShell maintenance script
       ansible.windows.win_copy:
         content: |
@@ -33,6 +37,11 @@
 
         dest: C:\maintenance.ps1
 
+
+    # ---------------------------------------------------------
+    # 2. Create the Windows Scheduled Task
+    # ---------------------------------------------------------
+
     - name: Create scheduled maintenance task
       community.windows.win_scheduled_task:
         name: AAP-Maintenance
@@ -52,19 +61,83 @@
         state: present
         enabled: true
 
+
+    # ---------------------------------------------------------
+    # 3. Verify the task exists and is configured correctly
+    # ---------------------------------------------------------
+
     - name: Verify scheduled task configuration
       ansible.windows.win_powershell:
         script: |
           $task = Get-ScheduledTask -TaskName "AAP-Maintenance"
+          $info = Get-ScheduledTaskInfo -TaskName "AAP-Maintenance"
 
           Write-Output "===== SCHEDULED TASK VERIFICATION ====="
           Write-Output "Task Name: $($task.TaskName)"
           Write-Output "State: $($task.State)"
           Write-Output "Executable: $($task.Actions.Execute)"
           Write-Output "Arguments: $($task.Actions.Arguments)"
+          Write-Output "Last Run: $($info.LastRunTime)"
+          Write-Output "Next Run: $($info.NextRunTime)"
+          Write-Output "Last Result: $($info.LastTaskResult)"
+
+
+    # ---------------------------------------------------------
+    # 4. Trigger the scheduled task immediately for the demo
+    # ---------------------------------------------------------
+
+    - name: Run maintenance task now
+      ansible.windows.win_powershell:
+        script: |
+          Write-Output "Starting AAP-Maintenance..."
+
+          Start-ScheduledTask -TaskName "AAP-Maintenance"
+
+          # Wait for the task to finish
+          $timeout = 30
+          $elapsed = 0
+
+          do {
+              Start-Sleep -Seconds 2
+              $elapsed += 2
+              $state = (Get-ScheduledTask -TaskName "AAP-Maintenance").State
+          }
+          while ($state -eq "Running" -and $elapsed -lt $timeout)
+
+          Write-Output "Task state: $state"
 
           $info = Get-ScheduledTaskInfo -TaskName "AAP-Maintenance"
 
           Write-Output "Last Run: $($info.LastRunTime)"
-          Write-Output "Next Run: $($info.NextRunTime)"
           Write-Output "Last Result: $($info.LastTaskResult)"
+
+          if ($info.LastTaskResult -ne 0) {
+              throw "AAP-Maintenance did not complete successfully."
+          }
+
+
+    # ---------------------------------------------------------
+    # 5. Verify and display the maintenance report
+    # ---------------------------------------------------------
+
+    - name: Display Windows maintenance report
+      ansible.windows.win_powershell:
+        script: |
+          Write-Output ""
+          Write-Output "=========================================="
+          Write-Output "      WINDOWS MAINTENANCE REPORT"
+          Write-Output "=========================================="
+
+          if (Test-Path "C:\maintenance-report.txt") {
+
+              Write-Output "PASS: Maintenance report was created."
+              Write-Output ""
+
+              Get-Content "C:\maintenance-report.txt"
+
+          }
+          else {
+
+              throw "FAIL: C:\maintenance-report.txt was not created."
+
+          }
