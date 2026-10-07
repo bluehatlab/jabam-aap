@@ -1,0 +1,32 @@
+---
+- name: Reset certificate lifecycle demo
+  hosts: rhel
+  become: true
+  gather_facts: false
+
+  vars:
+    cert_directory: /etc/pki/aap-demo
+
+  tasks:
+
+    - name: Remove demo certificate environment
+      ansible.builtin.file:
+        path: "{{ cert_directory }}"
+        state: absent
+
+    - name: Confirm certificate environment removed
+      ansible.builtin.stat:
+        path: "{{ cert_directory }}"
+      register: reset_validation
+
+    - name: Display reset result
+      ansible.builtin.debug:
+        msg: |
+          ========================================
+          CERTIFICATE DEMO RESET
+          ========================================
+
+          Certificate environment exists:
+          {{ reset_validation.stat.exists }}
+
+          STATUS: READY FOR NEXT DEMO

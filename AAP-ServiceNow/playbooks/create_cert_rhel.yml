@@ -1,0 +1,69 @@
+---
+- name: Create demo TLS certificate
+  hosts: rhel
+  become: true
+  gather_facts: false
+
+  vars:
+    cert_directory: /etc/pki/aap-demo
+    cert_path: /etc/pki/aap-demo/server.crt
+    key_path: /etc/pki/aap-demo/server.key
+
+  tasks:
+
+    - name: Create certificate directory
+      ansible.builtin.file:
+        path: "{{ cert_directory }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: Generate private key
+      ansible.builtin.command:
+        cmd: >
+          openssl genrsa
+          -out {{ key_path }}
+          2048
+      args:
+        creates: "{{ key_path }}"
+
+    - name: Generate short-lived demo certificate
+      ansible.builtin.command:
+        cmd: >
+          openssl req
+          -new
+          -x509
+          -key {{ key_path }}
+          -out {{ cert_path }}
+          -days 5
+          -subj "/CN=aap-demo.example.com"
+      args:
+        creates: "{{ cert_path }}"
+
+    - name: Read certificate expiration
+      ansible.builtin.command:
+        cmd: >
+          openssl x509
+          -enddate
+          -noout
+          -in {{ cert_path }}
+      register: cert_expiration
+      changed_when: false
+
+    - name: Display certificate creation result
+      ansible.builtin.debug:
+        msg: |
+          ========================================
+          CERTIFICATE CREATED
+          ========================================
+
+          Host: {{ inventory_hostname }}
+
+          Certificate:
+          {{ cert_path }}
+
+          {{ cert_expiration.stdout }}
+
+          Lifecycle state:
+          CERTIFICATE ISSUED

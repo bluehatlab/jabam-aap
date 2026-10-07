@@ -1,0 +1,47 @@
+---
+- name: Renew TLS certificate
+  hosts: rhel
+  become: true
+  gather_facts: false
+
+  vars:
+    cert_path: /etc/pki/aap-demo/server.crt
+    key_path: /etc/pki/aap-demo/server.key
+
+  tasks:
+
+    - name: Back up expiring certificate
+      ansible.builtin.copy:
+        src: "{{ cert_path }}"
+        dest: "{{ cert_path }}.old"
+        remote_src: true
+        mode: "0600"
+
+    - name: Generate replacement certificate
+      ansible.builtin.command:
+        cmd: >
+          openssl req
+          -new
+          -x509
+          -key {{ key_path }}
+          -out {{ cert_path }}
+          -days 365
+          -subj "/CN=aap-demo.example.com"
+
+    - name: Display renewal status
+      ansible.builtin.debug:
+        msg: |
+          ========================================
+          CERTIFICATE RENEWED
+          ========================================
+
+          Host:
+          {{ inventory_hostname }}
+
+          Previous certificate:
+          {{ cert_path }}.old
+
+          New certificate:
+          {{ cert_path }}
+
+          STATUS: CERTIFICATE REPLACED

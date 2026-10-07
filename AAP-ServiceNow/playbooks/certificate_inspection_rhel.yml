@@ -1,0 +1,67 @@
+---
+- name: Inspect TLS certificate
+  hosts: rhel
+  become: true
+  gather_facts: false
+
+  vars:
+    cert_path: /etc/pki/aap-demo/server.crt
+
+    # 30 days
+    renewal_threshold: 2592000
+
+  tasks:
+
+    - name: Check certificate exists
+      ansible.builtin.stat:
+        path: "{{ cert_path }}"
+      register: cert_file
+
+    - name: Fail if certificate does not exist
+      ansible.builtin.fail:
+        msg: "Certificate does not exist."
+      when: not cert_file.stat.exists
+
+    - name: Read certificate information
+      ansible.builtin.command:
+        cmd: >
+          openssl x509
+          -in {{ cert_path }}
+          -noout
+          -subject
+          -issuer
+          -dates
+      register: cert_information
+      changed_when: false
+
+    - name: Check whether certificate expires within 30 days
+      ansible.builtin.command:
+        cmd: >
+          openssl x509
+          -checkend {{ renewal_threshold }}
+          -noout
+          -in {{ cert_path }}
+      register: expiration_check
+      changed_when: false
+      failed_when: false
+
+    - name: Display certificate status
+      ansible.builtin.debug:
+        msg: |
+          ========================================
+          CERTIFICATE LIFECYCLE CHECK
+          ========================================
+
+          {{ cert_information.stdout }}
+
+          Renewal threshold:
+          30 days
+
+          Renewal required:
+          {{ expiration_check.rc != 0 }}
+
+          {% if expiration_check.rc != 0 %}
+          STATUS: CERTIFICATE REQUIRES RENEWAL
+          {% else %}
+          STATUS: CERTIFICATE HEALTHY
+          {% endif %}

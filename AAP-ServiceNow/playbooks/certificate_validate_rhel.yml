@@ -1,0 +1,57 @@
+---
+- name: Validate renewed TLS certificate
+  hosts: rhel
+  become: true
+  gather_facts: false
+
+  vars:
+    cert_path: /etc/pki/aap-demo/server.crt
+    validation_period: 2592000
+
+  tasks:
+
+    - name: Read renewed certificate
+      ansible.builtin.command:
+        cmd: >
+          openssl x509
+          -in {{ cert_path }}
+          -noout
+          -subject
+          -issuer
+          -dates
+      register: certificate
+      changed_when: false
+
+    - name: Validate certificate remains valid beyond 30 days
+      ansible.builtin.command:
+        cmd: >
+          openssl x509
+          -checkend {{ validation_period }}
+          -noout
+          -in {{ cert_path }}
+      register: certificate_validation
+      changed_when: false
+      failed_when: false
+
+    - name: Display validation result
+      ansible.builtin.debug:
+        msg: |
+          ========================================
+          CERTIFICATE VALIDATION
+          ========================================
+
+          {{ certificate.stdout }}
+
+          Valid beyond 30 days:
+          {{ certificate_validation.rc == 0 }}
+
+          {% if certificate_validation.rc == 0 %}
+          STATUS: CERTIFICATE HEALTHY
+          {% else %}
+          STATUS: CERTIFICATE VALIDATION FAILED
+          {% endif %}
+
+    - name: Fail workflow if validation failed
+      ansible.builtin.fail:
+        msg: "Renewed certificate failed lifecycle validation."
+      when: certificate_validation.rc != 0
