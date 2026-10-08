@@ -1,48 +1,41 @@
 ---
-- name: Grant RHEL application support access
+- name: Create RHEL user account
   hosts: rhel
   become: true
   gather_facts: false
 
-  vars:
-    username: aap_demo_user
-
   tasks:
 
-    - name: Create application support group
-      ansible.builtin.group:
-        name: app-support
-        state: present
+    - name: Verify username was provided
+      ansible.builtin.assert:
+        that:
+          - username is defined
+          - username | length > 0
+        fail_msg: "A username must be provided by the AAP survey."
 
-    - name: Add user to application support group
+    - name: Create user account
       ansible.builtin.user:
         name: "{{ username }}"
-        groups: app-support
-        append: true
+        state: present
+        shell: /bin/bash
+        create_home: true
 
-    - name: Configure limited sudo privileges
-      ansible.builtin.copy:
-        dest: /etc/sudoers.d/app-support
-        content: |
-          %app-support ALL=(root) NOPASSWD: /usr/bin/systemctl status httpd
-          %app-support ALL=(root) NOPASSWD: /usr/bin/systemctl restart httpd
-        owner: root
-        group: root
-        mode: "0440"
-        validate: "/usr/sbin/visudo -cf %s"
+    - name: Get user information
+      ansible.builtin.command:
+        cmd: "id {{ username }}"
+      register: user_info
+      changed_when: false
 
-    - name: Display granted access
+    - name: Display account creation
       ansible.builtin.debug:
         msg: |
           ========================================
-          ACCESS GRANTED
+          USER ACCOUNT CREATED
           ========================================
 
+          Host: {{ inventory_hostname }}
           User: {{ username }}
-          Role: Application Support
 
-          Authorized operations:
-          - View httpd status
-          - Restart httpd
+          {{ user_info.stdout }}
 
-          STATUS: ACCESS PROVISIONED
+          STATUS: IDENTITY PROVISIONED

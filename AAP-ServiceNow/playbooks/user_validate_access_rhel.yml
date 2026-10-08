@@ -4,10 +4,14 @@
   become: true
   gather_facts: false
 
-  vars:
-    username: aap_demo_user
-
   tasks:
+
+    - name: Verify username was provided
+      ansible.builtin.assert:
+        that:
+          - username is defined
+          - username | length > 0
+        fail_msg: "A username must be provided by the AAP workflow."
 
     - name: Validate user exists
       ansible.builtin.command:
