@@ -1,0 +1,44 @@
+---
+- name: Revoke RHEL user access
+  hosts: rhel
+  become: true
+  gather_facts: false
+
+  vars:
+    username: aap_demo_user
+
+  tasks:
+
+    - name: Lock user account
+      ansible.builtin.user:
+        name: "{{ username }}"
+        password_lock: true
+
+    - name: Terminate active user sessions
+      ansible.builtin.command:
+        cmd: "pkill -KILL -u {{ username }}"
+      register: session_cleanup
+      failed_when: false
+      changed_when: session_cleanup.rc == 0
+
+    - name: Remove user from application support group
+      ansible.builtin.command:
+        cmd: "gpasswd -d {{ username }} app-support"
+      register: group_removal
+      failed_when: false
+      changed_when: group_removal.rc == 0
+
+    - name: Display revocation result
+      ansible.builtin.debug:
+        msg: |
+          ========================================
+          ACCESS REVOKED
+          ========================================
+
+          User: {{ username }}
+
+          ✓ Account locked
+          ✓ Active sessions terminated
+          ✓ Application support role removed
+
+          STATUS: ACCESS REVOKED

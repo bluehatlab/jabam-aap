@@ -1,0 +1,37 @@
+---
+- name: Create RHEL user account
+  hosts: rhel
+  become: true
+  gather_facts: false
+
+  vars:
+    username: aap_demo_user
+
+  tasks:
+
+    - name: Create user account
+      ansible.builtin.user:
+        name: "{{ username }}"
+        state: present
+        shell: /bin/bash
+        create_home: true
+
+    - name: Get user information
+      ansible.builtin.command:
+        cmd: "id {{ username }}"
+      register: user_info
+      changed_when: false
+
+    - name: Display account creation
+      ansible.builtin.debug:
+        msg: |
+          ========================================
+          USER ACCOUNT CREATED
+          ========================================
+
+          Host: {{ inventory_hostname }}
+          User: {{ username }}
+
+          {{ user_info.stdout }}
+
+          STATUS: IDENTITY PROVISIONED

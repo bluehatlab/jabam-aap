@@ -1,0 +1,48 @@
+---
+- name: Grant RHEL application support access
+  hosts: rhel
+  become: true
+  gather_facts: false
+
+  vars:
+    username: aap_demo_user
+
+  tasks:
+
+    - name: Create application support group
+      ansible.builtin.group:
+        name: app-support
+        state: present
+
+    - name: Add user to application support group
+      ansible.builtin.user:
+        name: "{{ username }}"
+        groups: app-support
+        append: true
+
+    - name: Configure limited sudo privileges
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/app-support
+        content: |
+          %app-support ALL=(root) NOPASSWD: /usr/bin/systemctl status httpd
+          %app-support ALL=(root) NOPASSWD: /usr/bin/systemctl restart httpd
+        owner: root
+        group: root
+        mode: "0440"
+        validate: "/usr/sbin/visudo -cf %s"
+
+    - name: Display granted access
+      ansible.builtin.debug:
+        msg: |
+          ========================================
+          ACCESS GRANTED
+          ========================================
+
+          User: {{ username }}
+          Role: Application Support
+
+          Authorized operations:
+          - View httpd status
+          - Restart httpd
+
+          STATUS: ACCESS PROVISIONED

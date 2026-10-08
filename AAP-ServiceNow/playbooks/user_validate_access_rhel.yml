@@ -1,0 +1,37 @@
+---
+- name: Validate RHEL user access
+  hosts: rhel
+  become: true
+  gather_facts: false
+
+  vars:
+    username: aap_demo_user
+
+  tasks:
+
+    - name: Validate user exists
+      ansible.builtin.command:
+        cmd: "id {{ username }}"
+      register: identity
+      changed_when: false
+
+    - name: Validate sudo privileges
+      ansible.builtin.command:
+        cmd: "sudo -l -U {{ username }}"
+      register: sudo_access
+      changed_when: false
+
+    - name: Display validation results
+      ansible.builtin.debug:
+        msg: |
+          ========================================
+          ACCESS VALIDATION
+          ========================================
+
+          IDENTITY:
+          {{ identity.stdout }}
+
+          AUTHORIZED PRIVILEGES:
+          {{ sudo_access.stdout }}
+
+          STATUS: USER ACCESS VALIDATED

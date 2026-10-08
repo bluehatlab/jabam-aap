@@ -1,0 +1,35 @@
+---
+- name: Remove RHEL user account
+  hosts: rhel
+  become: true
+  gather_facts: false
+
+  vars:
+    username: aap_demo_user
+
+  tasks:
+
+    - name: Remove user account and home directory
+      ansible.builtin.user:
+        name: "{{ username }}"
+        state: absent
+        remove: true
+
+    - name: Confirm user no longer exists
+      ansible.builtin.command:
+        cmd: "id {{ username }}"
+      register: user_check
+      changed_when: false
+      failed_when: false
+
+    - name: Display deprovisioning result
+      ansible.builtin.debug:
+        msg: |
+          ========================================
+          USER DEPROVISIONED
+          ========================================
+
+          User: {{ username }}
+          User exists: {{ user_check.rc == 0 }}
+
+          STATUS: ACCOUNT REMOVED

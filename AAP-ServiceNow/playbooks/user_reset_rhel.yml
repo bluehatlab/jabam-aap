@@ -1,0 +1,57 @@
+---
+- name: Reset RHEL user lifecycle demo
+  hosts: rhel
+  become: true
+  gather_facts: false
+
+  vars:
+    username: aap_demo_user
+
+  tasks:
+
+    - name: Terminate any remaining user processes
+      ansible.builtin.command:
+        cmd: "pkill -KILL -u {{ username }}"
+      failed_when: false
+      changed_when: false
+
+    - name: Remove demo user
+      ansible.builtin.user:
+        name: "{{ username }}"
+        state: absent
+        remove: true
+
+    - name: Remove application support sudo policy
+      ansible.builtin.file:
+        path: /etc/sudoers.d/app-support
+        state: absent
+
+    - name: Remove application support group
+      ansible.builtin.group:
+        name: app-support
+        state: absent
+
+    - name: Check user
+      ansible.builtin.command:
+        cmd: "id {{ username }}"
+      register: user_check
+      failed_when: false
+      changed_when: false
+
+    - name: Display reset status
+      ansible.builtin.debug:
+        msg: |
+          ========================================
+          USER LIFECYCLE DEMO RESET
+          ========================================
+
+          User exists:
+          {{ user_check.rc == 0 }}
+
+          Demo role removed:
+          app-support
+
+          Demo sudo policy removed:
+          /etc/sudoers.d/app-support
+
+          STATUS: READY FOR NEXT DEMO
