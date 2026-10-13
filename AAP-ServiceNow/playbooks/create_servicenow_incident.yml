@@ -12,10 +12,10 @@
 
     - name: Verify ServiceNow credential injection
       ansible.builtin.debug:
-      msg:
-        - "Host populated: {{ sn_host | length > 0 }}"
-        - "Username populated: {{ sn_username | length > 0 }}"
-        - "Password populated: {{ sn_password | length > 0 }}"
+        msg:
+          - "Host populated: {{ sn_host | length > 0 }}"
+          - "Username populated: {{ sn_username | length > 0 }}"
+          - "Password populated: {{ sn_password | length > 0 }}"
 
     - name: Create incident in ServiceNow
       ansible.builtin.uri:
