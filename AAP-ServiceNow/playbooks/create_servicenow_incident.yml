@@ -17,6 +17,7 @@
           username: "{{ sn_username }}"
           password: "{{ sn_password }}"
         state: new
+        caller: "{{ sn_username }}"
         short_description: "Apache service failure detected on RHEL"
         description: >-
           Event-Driven Ansible detected an Apache service failure
@@ -25,12 +26,14 @@
         impact: medium
         urgency: medium
       register: servicenow_incident
-      no_log: false
+      no_log: true
 
     - name: Display created incident
       ansible.builtin.debug:
         msg:
-          - "Incident result: {{ servicenow_incident.record | default({}) }}"
+          - "Incident Number: {{ servicenow_incident.record.number }}"
+          - "Caller: {{ sn_username }}"
+          - "State: {{ servicenow_incident.record.state }}"
 
     - name: Publish incident for workflow
       ansible.builtin.set_stats:
