@@ -1,7 +1,7 @@
 
 ---
 - name: Create ServiceNow incident from AAP
-  hosts: localhost
+  hosts: all
   gather_facts: false
 
   vars:
