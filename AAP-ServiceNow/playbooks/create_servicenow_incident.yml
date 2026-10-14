@@ -1,3 +1,4 @@
+
 ---
 - name: Create ServiceNow incident from AAP
   hosts: localhost
@@ -9,53 +10,30 @@
     sn_password: "{{ lookup('env', 'SN_PASSWORD') }}"
 
   tasks:
-
-    - name: Verify ServiceNow credential injection
-      ansible.builtin.debug:
-        msg:
-          - "Host populated: {{ sn_host | length > 0 }}"
-          - "Username populated: {{ sn_username | length > 0 }}"
-          - "Password populated: {{ sn_password | length > 0 }}"
-
-    - name: Create incident in ServiceNow
-      ansible.builtin.uri:
-        url: "{{ sn_host }}/api/now/table/incident"
-        method: POST
-
-        user: "{{ sn_username }}"
-        password: "{{ sn_password }}"
-        force_basic_auth: true
-
-        headers:
-          Accept: "application/json"
-          Content-Type: "application/json"
-
-        body_format: json
-
-        body:
-          short_description: "Apache service failure detected on RHEL"
-          description: >-
-            Event-Driven Ansible detected an Apache service failure
-            on the RHEL host. An automated remediation workflow
-            has been initiated by Red Hat Ansible Automation Platform.
-          impact: "2"
-          urgency: "2"
-
-        status_code: 201
-        return_content: true
-
+    - name: Create ServiceNow incident
+      servicenow.itsm.incident:
+        instance:
+          host: "{{ sn_host }}"
+          username: "{{ sn_username }}"
+          password: "{{ sn_password }}"
+        state: new
+        short_description: "Apache service failure detected on RHEL"
+        description: >-
+          Event-Driven Ansible detected an Apache service failure
+          on the RHEL host. An automated remediation workflow
+          has been initiated by Red Hat Ansible Automation Platform.
+        impact: medium
+        urgency: medium
       register: servicenow_incident
+      no_log: true
 
     - name: Display created incident
       ansible.builtin.debug:
         msg:
-          - "Incident created successfully"
-          - "Number: {{ servicenow_incident.json.result.number }}"
-          - "Sys ID: {{ servicenow_incident.json.result.sys_id }}"
-          - "State: {{ servicenow_incident.json.result.state }}"
+          - "Incident result: {{ servicenow_incident.record | default({}) }}"
 
-    - name: Publish ServiceNow incident for workflow
+    - name: Publish incident for workflow
       ansible.builtin.set_stats:
         data:
-          servicenow_incident_number: "{{ servicenow_incident.json.result.number }}"
-          servicenow_incident_sys_id: "{{ servicenow_incident.json.result.sys_id }}"
+          servicenow_incident_number: "{{ servicenow_incident.record.number }}"
+          servicenow_incident_sys_id: "{{ servicenow_incident.record.sys_id }}"
