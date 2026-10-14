@@ -20,6 +20,15 @@
         fail_msg: "ServiceNow credentials are missing."
       no_log: false
 
+    - name: Check ServiceNow environment injection
+      ansible.builtin.debug:
+        msg:
+          - "Host populated: {{ lookup('env', 'SN_HOST') | length > 0 }}"
+          - "Host valid URL: {{ lookup('env', 'SN_HOST') is match('^https?://') }}"
+          - "Username populated: {{ lookup('env', 'SN_USERNAME') | length > 0 }}"
+          - "Password populated: {{ lookup('env', 'SN_PASSWORD') | length > 0 }}"
+
+
     - name: Create ServiceNow incident
       servicenow.itsm.incident:
         instance:
