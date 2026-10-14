@@ -1,0 +1,13 @@
+---
+- name: Test RHEL connectivity
+  hosts: rhel
+  gather_facts: true
+
+  tasks:
+    - name: Display host information
+      ansible.builtin.debug:
+        msg:
+          - "Host: {{ inventory_hostname }}"
+          - "IP: {{ ansible_host }}"
+          - "OS: {{ ansible_distribution }}"
+          - "Version: {{ ansible_distribution_version }}"
