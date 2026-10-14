@@ -1,7 +1,8 @@
 
 ---
 - name: Create ServiceNow incident from AAP
-  hosts: all
+  hosts: localhost
+  connection: local
   gather_facts: false
 
   vars:
@@ -10,6 +11,16 @@
     sn_password: "{{ lookup('env', 'SN_PASSWORD') }}"
 
   tasks:
+    - name: Verify ServiceNow credential injection
+      ansible.builtin.assert:
+        that:
+          - sn_host is match('^https?://')
+          - sn_username | length > 0
+          - sn_password | length > 0
+        fail_msg: "ServiceNow credential injection is missing or invalid."
+        success_msg: "ServiceNow credentials are populated."
+      no_log: true
+
     - name: Create ServiceNow incident
       servicenow.itsm.incident:
         instance:
@@ -26,7 +37,7 @@
         impact: medium
         urgency: medium
       register: servicenow_incident
-      no_log: false
+      no_log: true
 
     - name: Display created incident
       ansible.builtin.debug:
