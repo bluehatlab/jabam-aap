@@ -11,14 +11,13 @@
     sn_password: "{{ lookup('env', 'SN_PASSWORD') }}"
 
   tasks:
-    - name: Verify ServiceNow credential injection
+    - name: Verify ServiceNow credentials
       ansible.builtin.assert:
         that:
           - sn_host is match('^https?://')
           - sn_username | length > 0
           - sn_password | length > 0
-        fail_msg: "ServiceNow credential injection is missing or invalid."
-        success_msg: "ServiceNow credentials are populated."
+        fail_msg: "ServiceNow credentials are missing."
       no_log: true
 
     - name: Create ServiceNow incident
@@ -43,7 +42,6 @@
       ansible.builtin.debug:
         msg:
           - "Incident Number: {{ servicenow_incident.record.number }}"
-          - "Caller: {{ sn_username }}"
           - "State: {{ servicenow_incident.record.state }}"
 
     - name: Publish incident for workflow
