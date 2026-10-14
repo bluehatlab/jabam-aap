@@ -25,7 +25,7 @@
         impact: medium
         urgency: medium
       register: servicenow_incident
-      no_log: true
+      no_log: false
 
     - name: Display created incident
       ansible.builtin.debug:
