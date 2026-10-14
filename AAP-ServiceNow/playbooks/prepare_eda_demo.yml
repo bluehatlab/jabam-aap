@@ -1,6 +1,6 @@
 ---
 - name: Prepare RHEL web service for EDA demo
-  hosts: ec2-98-89-5-15.compute-1.amazonaws.com
+  hosts: all
   gather_facts: false
   become: true
 
