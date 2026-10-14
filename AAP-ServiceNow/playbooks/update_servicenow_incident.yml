@@ -1,6 +1,6 @@
 ---
 - name: Update ServiceNow incident after remediation
-  hosts: localhost
+  hosts: all
   gather_facts: false
 
   vars:
