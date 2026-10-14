@@ -10,7 +10,16 @@
     sn_username: "{{ lookup('env', 'SN_USERNAME') }}"
     sn_password: "{{ lookup('env', 'SN_PASSWORD') }}"
 
+
   tasks:
+    - name: Check ServiceNow environment injection
+      ansible.builtin.debug:
+        msg:
+          - "Host populated: {{ lookup('env', 'SN_HOST') | length > 0 }}"
+          - "Host valid URL: {{ lookup('env', 'SN_HOST') is match('^https?://') }}"
+          - "Username populated: {{ lookup('env', 'SN_USERNAME') | length > 0 }}"
+          - "Password populated: {{ lookup('env', 'SN_PASSWORD') | length > 0 }}"
+
     - name: Verify ServiceNow credentials
       ansible.builtin.assert:
         that:
@@ -19,14 +28,6 @@
           - sn_password | length > 0
         fail_msg: "ServiceNow credentials are missing."
       no_log: false
-
-    - name: Check ServiceNow environment injection
-      ansible.builtin.debug:
-        msg:
-          - "Host populated: {{ lookup('env', 'SN_HOST') | length > 0 }}"
-          - "Host valid URL: {{ lookup('env', 'SN_HOST') is match('^https?://') }}"
-          - "Username populated: {{ lookup('env', 'SN_USERNAME') | length > 0 }}"
-          - "Password populated: {{ lookup('env', 'SN_PASSWORD') | length > 0 }}"
 
 
     - name: Create ServiceNow incident
