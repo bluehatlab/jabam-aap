@@ -18,7 +18,7 @@
           - sn_username | length > 0
           - sn_password | length > 0
         fail_msg: "ServiceNow credentials are missing."
-      no_log: true
+      no_log: false
 
     - name: Create ServiceNow incident
       servicenow.itsm.incident:
@@ -36,7 +36,7 @@
         impact: medium
         urgency: medium
       register: servicenow_incident
-      no_log: true
+      no_log: false
 
     - name: Display created incident
       ansible.builtin.debug:
