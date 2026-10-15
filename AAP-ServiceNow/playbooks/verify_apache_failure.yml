@@ -1,0 +1,24 @@
+---
+- name: Verify Apache is actually unavailable
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Check Apache HTTP endpoint
+      ansible.builtin.uri:
+        url: http://3.80.122.153/
+        method: GET
+        status_code: 200
+        timeout: 5
+      register: apache_check
+      ignore_errors: true
+
+    - name: Stop workflow if Apache has recovered
+      ansible.builtin.fail:
+        msg: "Apache is already healthy. Skipping redundant remediation."
+      when: apache_check is succeeded
+
+    - name: Confirm failure
+      ansible.builtin.debug:
+        msg: "Apache is still down. Proceeding with ServiceNow incident creation."
