@@ -93,17 +93,16 @@ jobs:
             --file execution-environment.yml \
             --tag ghcr.io/bluehatlab/apache-eda-de:latest
 
-      # 9. Verify the built image
+
       - name: Verify Decision Environment image
         run: |
-          docker image inspect \
-            ghcr.io/bluehatlab/apache-eda-de:latest
-
+          echo "Installed community.eda collection:"
           docker run --rm \
             ghcr.io/bluehatlab/apache-eda-de:latest \
             ansible-galaxy collection list community.eda
 
-      # 10. Push image to GHCR
-      - name: Push Decision Environment
-        run: |
-          docker push ghcr.io/bluehatlab/apache-eda-de:latest
+          echo "Available event source plugins:"
+          docker run --rm \
+            ghcr.io/bluehatlab/apache-eda-de:latest \
+            ansible-doc --list -t event_source
+
