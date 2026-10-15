@@ -11,5 +11,9 @@ dependencies:
     collections:
       - name: community.eda
 
+  exclude:
+    python:
+      - systemd-python
+
 options:
   package_manager_path: /usr/bin/microdnf
