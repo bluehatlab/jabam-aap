@@ -1,0 +1,38 @@
+
+---
+- name: Publish Apache failure event to EDA
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    eda_webhook_url: "{{ lookup('env', 'EDA_WEBHOOK_URL') }}"
+
+  tasks:
+    - name: Verify event configuration
+      ansible.builtin.assert:
+        that:
+          - eda_webhook_url | length > 0
+          - servicenow_incident_sys_id is defined
+          - servicenow_incident_sys_id | length > 0
+        fail_msg: "Missing EDA webhook URL or incident sys_id."
+
+    - name: Send failure event to EDA
+      ansible.builtin.uri:
+        url: "{{ eda_webhook_url }}"
+        method: POST
+        body_format: json
+        body:
+          event_type: apache_failure
+          host: eda-rhel
+          incident_sys_id: "{{ servicenow_incident_sys_id }}"
+          incident_number: "{{ servicenow_incident_number }}"
+        status_code:
+          - 200
+          - 202
+        headers:
+          Content-Type: application/json
+
+    - name: Confirm event submission
+      ansible.builtin.debug:
+        msg: "Apache failure event submitted to EDA."
