@@ -1,0 +1,17 @@
+
+---
+- name: Monitor Apache HTTP availability
+  hosts: all
+
+  sources:
+    - community.eda.url_check:
+        urls:
+          - http://3.80.122.153/
+        delay: 15
+
+  rules:
+    - name: Apache HTTP endpoint unavailable
+      condition: event.url_check.status == "down"
+      action:
+        debug:
+          msg: "Apache health-check failure detected"
