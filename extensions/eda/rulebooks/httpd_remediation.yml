@@ -6,7 +6,7 @@
     - community.eda.url_check:
         urls:
           - http://3.80.122.153/
-        delay: 15
+        delay: 30
 
   rules:
     - name: Log Apache health-check failure
