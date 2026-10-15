@@ -10,15 +10,6 @@
         delay: 15
 
   rules:
-    - name: Log Apache health-check failure
-      condition: event.url_check.status == "down"
-      action:
-        debug:
-          msg: >-
-            Apache health-check failure detected.
-            A ServiceNow incident will be created and
-            automated remediation will be initiated.
-
     - name: Apache automatic remediation
       condition: event.url_check.status == "down"
       action:
