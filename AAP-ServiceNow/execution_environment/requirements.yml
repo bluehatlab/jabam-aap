@@ -8,3 +8,4 @@ collections:
   - name: paloaltonetworks.panos
   - name: amazon.aws
   - name: community.windows
+  - name: community.eda
