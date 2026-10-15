@@ -22,6 +22,20 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      
+      - name: Inspect checked-out repository
+        run: |
+          echo "Branch:"
+          git branch --show-current
+
+          echo "Commit:"
+          git rev-parse HEAD
+
+          echo "Repository contents:"
+          ls -la
+
+          echo "Tracked Decision Environment files:"
+          git ls-files | grep -i 'decision.environment' || true
 
       - name: Set up Python
         uses: actions/setup-python@v5
