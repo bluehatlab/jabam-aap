@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - "AAP-ServiceNow/**"
+      - "AAP-ServiceNow/execution_environment/**"
       - ".github/workflows/build-ee-servicenow.yml"
   workflow_dispatch:
 

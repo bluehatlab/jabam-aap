@@ -1,6 +1,6 @@
 
 ---
-- name: Monitor Apache HTTP availability
+- name: RHEL Apache automatic remediation
   hosts: all
 
   sources:
@@ -10,8 +10,10 @@
         delay: 15
 
   rules:
-    - name: Apache HTTP endpoint unavailable
+    - name: Apache service failure detected
       condition: event.url_check.status == "down"
+
       action:
-        debug:
-          msg: "Apache health-check failure detected"
+        run_workflow_template:
+          name: "EDA - RHEL ServiceNow Remediation"
+          organization: "JULIAN"
