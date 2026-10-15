@@ -96,13 +96,21 @@ jobs:
 
       - name: Verify Decision Environment image
         run: |
-          echo "Installed community.eda collection:"
+          echo "Installed EDA collections:"
           docker run --rm \
             ghcr.io/bluehatlab/apache-eda-de:latest \
-            ansible-galaxy collection list community.eda
+            ansible-galaxy collection list
 
-          echo "Available event source plugins:"
+          echo "Checking community.eda event sources:"
           docker run --rm \
+            --entrypoint /bin/sh \
             ghcr.io/bluehatlab/apache-eda-de:latest \
-            ansible-doc --list -t event_source
+            -c 'find /usr/share/ansible/collections/ansible_collections/community/eda -type f -path "*/plugins/event_source/*" -print'
+
+          echo "Checking for url_check:"
+          docker run --rm \
+            --entrypoint /bin/sh \
+            ghcr.io/bluehatlab/apache-eda-de:latest \
+            -c 'find /usr/share/ansible/collections/ansible_collections/community/eda -name "*url_check*" -print'
+
 
