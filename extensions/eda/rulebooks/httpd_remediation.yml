@@ -1,4 +1,3 @@
-
 ---
 - name: Monitor Apache HTTP availability
   hosts: all
@@ -10,8 +9,19 @@
         delay: 15
 
   rules:
-    - name: Apache HTTP endpoint unavailable
+    - name: Log Apache health-check failure
       condition: event.url_check.status == "down"
       action:
         debug:
           msg: "Apache health-check failure detected"
+
+    - name: Apache automatic remediation
+      condition: event.url_check.status == "down"
+      throttle:
+        once_within: 5 minutes
+        group_by_attributes:
+          - event.url_check.url
+      action:
+        run_workflow_template:
+          name: "EDA RHEL ServiceNow Remediation (SN) - JULIAN"
+          organization: "JULIAN"
