@@ -1,0 +1,20 @@
+
+---
+- name: Simulate IIS failure on Windows
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Stop IIS web service
+      ansible.windows.win_service:
+        name: W3SVC
+        state: stopped
+
+    - name: Verify IIS is stopped
+      ansible.windows.win_service_info:
+        name: W3SVC
+      register: iis_status
+
+    - name: Display IIS failure
+      ansible.builtin.debug:
+        msg: "IIS status: {{ iis_status.services[0].state }}"
