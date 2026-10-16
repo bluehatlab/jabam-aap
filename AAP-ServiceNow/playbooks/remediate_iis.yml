@@ -1,0 +1,38 @@
+
+---
+- name: Remediate IIS failure on Windows
+  hosts: all
+  gather_facts: false
+
+  tasks:
+
+    - name: Enable and start IIS
+      ansible.windows.win_service:
+        name: W3SVC
+        state: started
+        start_mode: auto
+
+    - name: Verify IIS service is running
+      ansible.windows.win_service_info:
+        name: W3SVC
+      register: iis_service
+
+    - name: Confirm IIS service status
+      ansible.builtin.assert:
+        that:
+          - iis_service.services | length > 0
+          - iis_service.services[0].state == 'started'
+        fail_msg: "IIS service is not running."
+
+    - name: Verify IIS responds with HTTP 200
+      ansible.windows.win_uri:
+        url: http://localhost/
+        status_code: 200
+      register: web_check
+      retries: 5
+      delay: 3
+      until: web_check is succeeded
+
+    - name: Report remediation result
+      ansible.builtin.debug:
+        msg: "Windows IIS successfully restored. HTTP {{ web_check.status_code }}."

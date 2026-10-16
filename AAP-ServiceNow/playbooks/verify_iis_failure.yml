@@ -1,0 +1,35 @@
+
+---
+- name: Verify Windows IIS is actually unavailable
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    windows_iis_url: "http://32.198.25.88/"
+
+  tasks:
+    - name: Check Windows IIS HTTP endpoint
+      ansible.builtin.uri:
+        url: "{{ windows_iis_url }}"
+        method: GET
+        status_code: 200
+        timeout: 5
+      register: iis_check
+      failed_when: false
+      changed_when: false
+
+    - name: Stop redundant remediation if IIS is healthy
+      ansible.builtin.fail:
+        msg: >-
+          IIS is already responding with HTTP 200.
+          Skipping redundant ServiceNow incident creation
+          and remediation.
+      when: iis_check.status | default(0) | int == 200
+
+    - name: Confirm IIS outage
+      ansible.builtin.debug:
+        msg: >-
+          Windows IIS is unavailable.
+          Proceeding with ServiceNow incident creation
+          and automated remediation.
