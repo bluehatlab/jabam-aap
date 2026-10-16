@@ -1,0 +1,43 @@
+
+---
+- name: Monitor RHEL Apache HTTP availability
+  hosts: all
+
+  sources:
+    - community.eda.url_check:
+        urls:
+          - http://3.80.122.153/
+        delay: 15
+
+  rules:
+    - name: Apache automatic remediation
+      condition: event.url_check.status == "down"
+      throttle:
+        once_within: 5 minutes
+        group_by_attributes:
+          - event.url_check.url
+      action:
+        run_workflow_template:
+          name: "EDA RHEL ServiceNow Remediation (SN) - JULIAN"
+          organization: "JULIAN"
+
+- name: Monitor Windows IIS HTTP availability
+  hosts: all
+
+  sources:
+    - community.eda.url_check:
+        urls:
+          - http://32.198.25.88/
+        delay: 15
+
+  rules:
+    - name: Windows IIS automatic remediation
+      condition: event.url_check.status == "down"
+      throttle:
+        once_within: 5 minutes
+        group_by_attributes:
+          - event.url_check.url
+      action:
+        run_workflow_template:
+          name: "EDA Windows ServiceNow Remediation (SN) - JULIAN"
+          organization: "JULIAN"
