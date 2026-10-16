@@ -10,6 +10,12 @@
         delay: 15
 
   rules:
+    - name: Report Apache healthy
+      condition: event.url_check.status == "up"
+      action:
+        debug:
+          msg: "RHEL Apache is UP - HTTP monitoring active"
+
     - name: Apache automatic remediation
       condition: event.url_check.status == "down"
       throttle:
@@ -31,6 +37,12 @@
         delay: 15
 
   rules:
+    - name: Report Windows IIS healthy
+      condition: event.url_check.status == "up"
+      action:
+        debug:
+          msg: "Windows IIS is UP - HTTP monitoring active"
+
     - name: Windows IIS automatic remediation
       condition: event.url_check.status == "down"
       throttle:
