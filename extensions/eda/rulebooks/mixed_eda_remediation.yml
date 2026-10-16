@@ -1,3 +1,4 @@
+
 ---
 - name: Monitor RHEL Apache and Windows IIS
   hosts: all
@@ -26,7 +27,7 @@
         debug:
           msg: "Windows Server 2022 | IIS | UP"
 
-    - name: Trigger remediation on outage
+    - name: Apache or IIS DOWN - Trigger Remediation
       condition: event.url_check.status == "down"
       action:
         run_workflow_template:
