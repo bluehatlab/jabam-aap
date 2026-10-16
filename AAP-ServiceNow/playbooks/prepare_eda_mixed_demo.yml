@@ -1,0 +1,42 @@
+
+---
+- name: Simulate Apache failure on RHEL
+  hosts: rhel
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Stop Apache
+      ansible.builtin.systemd:
+        name: httpd
+        state: stopped
+
+    - name: Verify Apache is down
+      ansible.builtin.command:
+        cmd: systemctl is-active httpd
+      register: httpd_status
+      changed_when: false
+      failed_when: false
+
+    - name: Display Apache failure
+      ansible.builtin.debug:
+        msg: "Apache status: {{ httpd_status.stdout }}"
+
+- name: Simulate IIS failure on Windows
+  hosts: windows
+  gather_facts: false
+
+  tasks:
+    - name: Stop IIS web service
+      ansible.windows.win_service:
+        name: W3SVC
+        state: stopped
+
+    - name: Verify IIS is stopped
+      ansible.windows.win_service_info:
+        name: W3SVC
+      register: iis_status
+
+    - name: Display IIS failure
+      ansible.builtin.debug:
+        msg: "IIS status: {{ iis_status.services[0].state }}"
