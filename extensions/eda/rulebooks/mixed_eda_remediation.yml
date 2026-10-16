@@ -27,6 +27,12 @@
         debug:
           msg: "Windows Server 2022 | IIS | UP"
 
+    - name: Log outage
+      condition: event.url_check.status == "down"
+      action:
+        debug:
+          msg: "OUTAGE DETECTED | {{ event.url_check.url }} | DOWN"
+
     - name: Apache or IIS DOWN - Trigger Remediation
       condition: event.url_check.status == "down"
       action:
