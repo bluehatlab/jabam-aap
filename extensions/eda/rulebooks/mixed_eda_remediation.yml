@@ -54,14 +54,3 @@
       action:
         debug:
           msg: "Windows Server 2022 | IIS | DOWN | 32.198.25.88"
-
-    - name: Remediate Windows IIS outage
-      condition: event.url_check.status == "down"
-      throttle:
-        once_within: 5 minutes
-        group_by_attributes:
-          - event.url_check.url
-      action:
-        run_workflow_template:
-          name: "EDA RHEL ServiceNow Mixed Remediation (SN) - JULIAN"
-          organization: "JULIAN"
