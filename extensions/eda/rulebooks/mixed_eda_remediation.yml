@@ -1,4 +1,3 @@
-
 ---
 - name: Monitor RHEL Apache and Windows IIS
   hosts: all
