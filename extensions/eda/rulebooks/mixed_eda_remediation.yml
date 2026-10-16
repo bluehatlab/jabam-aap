@@ -19,14 +19,6 @@
         debug:
           msg: "RHEL 10 | Apache | UP"
 
-    - name: Apache DOWN
-      condition: >-
-        event.url_check.status == "down" and
-        event.url_check.url == "http://3.80.122.153/"
-      action:
-        debug:
-          msg: "RHEL 10 | Apache | DOWN"
-
     - name: Windows IIS UP
       condition: >-
         event.url_check.status == "up" and
@@ -35,15 +27,7 @@
         debug:
           msg: "Windows Server 2022 | IIS | UP"
 
-    - name: Windows IIS DOWN
-      condition: >-
-        event.url_check.status == "down" and
-        event.url_check.url == "http://32.198.25.88/"
-      action:
-        debug:
-          msg: "Windows Server 2022 | IIS | DOWN"
-
-    - name: Trigger mixed remediation on outage
+    - name: Trigger remediation on outage
       condition: event.url_check.status == "down"
       action:
         run_workflow_template:
