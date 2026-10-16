@@ -19,13 +19,19 @@
       failed_when: false
       changed_when: false
 
+    - name: Display IIS HTTP check result
+      ansible.builtin.debug:
+        msg:
+          - "HTTP status: {{ iis_check.status | default('undefined') }}"
+          - "HTTP message: {{ iis_check.msg | default('none') }}"
+
     - name: Stop redundant remediation if IIS is healthy
       ansible.builtin.fail:
         msg: >-
           IIS is already responding with HTTP 200.
           Skipping redundant ServiceNow incident creation
           and remediation.
-      when: iis_check.status | default(0) | int == 200
+      when: (iis_check.status | default(0) | int) == 200
 
     - name: Confirm IIS outage
       ansible.builtin.debug:
