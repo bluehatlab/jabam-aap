@@ -17,7 +17,7 @@
         event.url_check.url == "http://3.80.122.153/"
       action:
         debug:
-          msg: "RHEL 10 | Apache | UP | 3.80.122.153"
+          msg: "RHEL 10 | Apache | UP"
 
     - name: Report Apache DOWN
       condition: >-
@@ -25,7 +25,7 @@
         event.url_check.url == "http://3.80.122.153/"
       action:
         debug:
-          msg: "RHEL 10 | Apache | DOWN | 3.80.122.153"
+          msg: "RHEL 10 | Apache | DOWN"
 
     - name: Report Windows IIS UP
       condition: >-
@@ -33,7 +33,7 @@
         event.url_check.url == "http://32.198.25.88/"
       action:
         debug:
-          msg: "Windows Server 2022 | IIS | UP | 32.198.25.88"
+          msg: "Windows Server 2022 | IIS | UP"
 
     - name: Report Windows IIS DOWN
       condition: >-
@@ -41,13 +41,10 @@
         event.url_check.url == "http://32.198.25.88/"
       action:
         debug:
-          msg: "Windows Server 2022 | IIS | DOWN | 32.198.25.88"
+          msg: "Windows Server 2022 | IIS | DOWN"
 
-    - name: Launch mixed remediation when both services are DOWN
-      condition:
-        all:
-          - event.url_check.status == "down" and event.url_check.url == "http://3.80.122.153/"
-          - event.url_check.status == "down" and event.url_check.url == "http://32.198.25.88/"
+    - name: Trigger mixed remediation on outage
+      condition: event.url_check.status == "down"
       action:
         run_workflow_template:
           name: "EDA RHEL ServiceNow Mixed Remediation (SN) - JULIAN"
