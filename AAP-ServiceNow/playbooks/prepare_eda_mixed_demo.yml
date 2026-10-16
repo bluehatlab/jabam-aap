@@ -1,42 +1,62 @@
 
 ---
-- name: Simulate Apache failure on RHEL
-  hosts: rhel
-  gather_facts: false
-  become: true
-
-  tasks:
-    - name: Stop Apache
-      ansible.builtin.systemd:
-        name: httpd
-        state: stopped
-
-    - name: Verify Apache is down
-      ansible.builtin.command:
-        cmd: systemctl is-active httpd
-      register: httpd_status
-      changed_when: false
-      failed_when: false
-
-    - name: Display Apache failure
-      ansible.builtin.debug:
-        msg: "Apache status: {{ httpd_status.stdout }}"
-
-- name: Simulate IIS failure on Windows
+- name: Windows IIS Preparation and Breakage
   hosts: windows
   gather_facts: false
 
+  vars:
+    iis_action: "{{ iis_action | default('prepare') }}"
+
   tasks:
+
+    # PREPARATION
+    - name: Install IIS Web Server
+      ansible.windows.win_feature:
+        name: Web-Server
+        state: present
+        include_management_tools: true
+      when: iis_action == "prepare"
+
+    - name: Create demo web page
+      ansible.windows.win_copy:
+        dest: C:\inetpub\wwwroot\index.html
+        content: |
+          Windows Server - Managed by Ansible Automation Platform
+      when: iis_action == "prepare"
+
+    - name: Enable and start IIS
+      ansible.windows.win_service:
+        name: W3SVC
+        state: started
+        start_mode: auto
+      when: iis_action == "prepare"
+
+    - name: Verify IIS responds
+      ansible.windows.win_uri:
+        url: http://localhost/
+        status_code: 200
+      register: web_check
+      when: iis_action == "prepare"
+
+    - name: Display preparation result
+      ansible.builtin.debug:
+        msg: "Windows IIS is running. HTTP status: {{ web_check.status_code }}"
+      when: iis_action == "prepare"
+
+    # BREAKAGE
     - name: Stop IIS web service
       ansible.windows.win_service:
         name: W3SVC
         state: stopped
+      when: iis_action == "break"
 
     - name: Verify IIS is stopped
       ansible.windows.win_service_info:
         name: W3SVC
       register: iis_status
+      when: iis_action == "break"
 
-    - name: Display IIS failure
+    - name: Display failure
       ansible.builtin.debug:
-        msg: "IIS status: {{ iis_status.services[0].state }}"
+        msg: "Windows IIS status: {{ iis_status.services[0].state }}"
+      when: iis_action == "break"
