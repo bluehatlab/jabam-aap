@@ -1,29 +1,53 @@
 
 ---
-- name: Monitor RHEL Apache HTTP availability
+- name: Monitor RHEL Apache and Windows IIS
   hosts: all
 
   sources:
     - community.eda.url_check:
         urls:
           - http://3.80.122.153/
+          - http://32.198.25.88/
         delay: 15
 
   rules:
     - name: Report Apache UP
-      condition: event.url_check.status == "up"
+      condition: >-
+        event.url_check.status == "up" and
+        event.url_check.url == "http://3.80.122.153/"
       action:
         debug:
           msg: "RHEL 10 | Apache | UP | 3.80.122.153"
 
     - name: Report Apache DOWN
-      condition: event.url_check.status == "down"
+      condition: >-
+        event.url_check.status == "down" and
+        event.url_check.url == "http://3.80.122.153/"
       action:
         debug:
           msg: "RHEL 10 | Apache | DOWN | 3.80.122.153"
 
-    - name: Remediate Apache outage
-      condition: event.url_check.status == "down"
+    - name: Report Windows IIS UP
+      condition: >-
+        event.url_check.status == "up" and
+        event.url_check.url == "http://32.198.25.88/"
+      action:
+        debug:
+          msg: "Windows Server 2022 | IIS | UP | 32.198.25.88"
+
+    - name: Report Windows IIS DOWN
+      condition: >-
+        event.url_check.status == "down" and
+        event.url_check.url == "http://32.198.25.88/"
+      action:
+        debug:
+          msg: "Windows Server 2022 | IIS | DOWN | 32.198.25.88"
+
+    - name: Launch mixed remediation when both services are DOWN
+      condition:
+        all:
+          - event.url_check.status == "down" and event.url_check.url == "http://3.80.122.153/"
+          - event.url_check.status == "down" and event.url_check.url == "http://32.198.25.88/"
       throttle:
         once_within: 5 minutes
         group_by_attributes:
@@ -32,25 +56,3 @@
         run_workflow_template:
           name: "EDA RHEL ServiceNow Mixed Remediation (SN) - JULIAN"
           organization: "JULIAN"
-
-- name: Monitor Windows IIS HTTP availability
-  hosts: all
-
-  sources:
-    - community.eda.url_check:
-        urls:
-          - http://32.198.25.88/
-        delay: 15
-
-  rules:
-    - name: Report Windows IIS UP
-      condition: event.url_check.status == "up"
-      action:
-        debug:
-          msg: "Windows Server 2022 | IIS | UP | 32.198.25.88"
-
-    - name: Report Windows IIS DOWN
-      condition: event.url_check.status == "down"
-      action:
-        debug:
-          msg: "Windows Server 2022 | IIS | DOWN | 32.198.25.88"
