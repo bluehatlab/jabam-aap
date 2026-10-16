@@ -1,41 +1,41 @@
-
 ---
 - name: Monitor RHEL Apache and Windows IIS
-  hosts: all
+ hosts: all
 
-  sources:
-    - community.eda.url_check:
-        urls:
-          - http://3.80.122.153/
-          - http://32.198.25.88/
-        delay: 15
 
-  rules:
-    - name: Apache UP
-      condition: >-
-        event.url_check.status == "up" and
-        event.url_check.url == "http://3.80.122.153/"
-      action:
-        debug:
-          msg: "RHEL 10 | Apache | UP"
+ sources:
+   - community.eda.url_check:
+       urls:
+         - http://3.80.122.153/
+         - http://32.198.25.88/
+       delay: 15
 
-    - name: Windows IIS UP
-      condition: >-
-        event.url_check.status == "up" and
-        event.url_check.url == "http://32.198.25.88/"
-      action:
-        debug:
-          msg: "Windows Server 2022 | IIS | UP"
 
-    - name: Log outage
-      condition: event.url_check.status == "down"
-      action:
-        debug:
-          msg: "OUTAGE DETECTED | {{ event.url_check.url }} | DOWN"
+ rules:
+   - name: Apache UP
+     condition: >-
+       event.url_check.status == "up" and
+       event.url_check.url == "http://3.80.122.153/"
+     action:
+       debug:
+         msg: "RHEL 10 | Apache | UP"
 
-    - name: Apache or IIS DOWN - Trigger Remediation
-      condition: event.url_check.status == "down"
-      action:
-        run_workflow_template:
-          name: "EDA RHEL ServiceNow Mixed Remediation (SN) - JULIAN"
-          organization: "JULIAN"
+
+   - name: Windows IIS UP
+     condition: >-
+       event.url_check.status == "up" and
+       event.url_check.url == "http://32.198.25.88/"
+     action:
+       debug:
+         msg: "Windows Server 2022 | IIS | UP"
+
+
+   - name: Trigger remediation on outage
+     condition: event.url_check.status == "down"
+     action:
+       run_workflow_template:
+         name: "EDA RHEL ServiceNow Mixed Remediation (SN) - JULIAN"
+         organization: "JULIAN"
+
+
+
