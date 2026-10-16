@@ -26,7 +26,9 @@
           - incident_os is defined
           - incident_service is defined
           - incident_host is defined
-        fail_msg: "Missing incident details."
+          - incident_artifact_prefix is defined
+          - incident_artifact_prefix in ['windows', 'rhel']
+        fail_msg: "Missing or invalid incident details."
 
     - name: Create ServiceNow incident
       servicenow.itsm.incident:
@@ -62,5 +64,7 @@
     - name: Publish incident for downstream workflow jobs
       ansible.builtin.set_stats:
         data:
-          servicenow_incident_number: "{{ servicenow_incident.record.number }}"
-          servicenow_incident_sys_id: "{{ servicenow_incident.record.sys_id }}"
+          "{{ incident_artifact_prefix }}_incident_number": "{{ servicenow_incident.record.number }}"
+          "{{ incident_artifact_prefix }}_incident_sys_id": "{{ servicenow_incident.record.sys_id }}"
+        per_host: false
+        aggregate: false

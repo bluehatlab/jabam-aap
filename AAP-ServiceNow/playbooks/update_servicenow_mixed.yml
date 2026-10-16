@@ -11,17 +11,39 @@
     sn_password: "{{ lookup('env', 'SN_PASSWORD') }}"
 
   tasks:
-    - name: Validate incident information
+    - name: Validate incident configuration
       ansible.builtin.assert:
         that:
-          - servicenow_incident_number is defined
-          - servicenow_incident_number | length > 0
+          - incident_artifact_prefix is defined
+          - incident_artifact_prefix in ['windows', 'rhel']
           - incident_os is defined
           - incident_service is defined
           - incident_host is defined
+        fail_msg: "Missing or invalid incident configuration."
+
+    - name: Validate incident artifact exists
+      ansible.builtin.assert:
+        that:
+          - lookup(
+              'vars',
+              incident_artifact_prefix ~ '_incident_number',
+              default=''
+            ) | length > 0
         fail_msg: >-
-          Missing incident details or ServiceNow incident number.
-          Cannot safely update the existing ticket.
+          No incident number was passed from the corresponding
+          ServiceNow creation job.
+
+    - name: Select incident for this operating system
+      ansible.builtin.set_fact:
+        servicenow_incident_number: >-
+          {{ lookup('vars', incident_artifact_prefix ~ '_incident_number') }}
+
+    - name: Display incident selected for resolution
+      ansible.builtin.debug:
+        msg:
+          - "Target incident: {{ servicenow_incident_number }}"
+          - "Operating system: {{ incident_os }}"
+          - "Service: {{ incident_service }}"
 
     - name: Resolve existing ServiceNow incident
       servicenow.itsm.incident:
@@ -42,10 +64,17 @@
       register: updated_incident
       no_log: true
 
+    - name: Verify the correct incident was updated
+      ansible.builtin.assert:
+        that:
+          - updated_incident.record is defined
+          - updated_incident.record.number == servicenow_incident_number
+        fail_msg: "ServiceNow returned an unexpected incident number."
+
     - name: Report incident resolution
       ansible.builtin.debug:
         msg:
-          - "Incident: {{ servicenow_incident_number }}"
-          - "Status: Resolved"
+          - "Incident: {{ updated_incident.record.number }}"
+          - "Status: Resolution update completed"
           - "Host: {{ incident_host }}"
           - "Service: {{ incident_service }}"
