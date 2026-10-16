@@ -10,13 +10,19 @@
         delay: 15
 
   rules:
-    - name: Report Apache healthy
+    - name: Report Apache UP
       condition: event.url_check.status == "up"
       action:
         debug:
-          msg: "RHEL Apache is UP - HTTP monitoring active"
+          msg: "RHEL 10 | Apache | UP | 3.80.122.153"
 
-    - name: Apache automatic remediation
+    - name: Report Apache DOWN
+      condition: event.url_check.status == "down"
+      action:
+        debug:
+          msg: "RHEL 10 | Apache | DOWN | 3.80.122.153"
+
+    - name: Remediate Apache outage
       condition: event.url_check.status == "down"
       throttle:
         once_within: 5 minutes
@@ -37,13 +43,19 @@
         delay: 15
 
   rules:
-    - name: Report Windows IIS healthy
+    - name: Report Windows IIS UP
       condition: event.url_check.status == "up"
       action:
         debug:
-          msg: "Windows IIS is UP - HTTP monitoring active"
+          msg: "Windows Server 2022 | IIS | UP | 32.198.25.88"
 
-    - name: Windows IIS automatic remediation
+    - name: Report Windows IIS DOWN
+      condition: event.url_check.status == "down"
+      action:
+        debug:
+          msg: "Windows Server 2022 | IIS | DOWN | 32.198.25.88"
+
+    - name: Remediate Windows IIS outage
       condition: event.url_check.status == "down"
       throttle:
         once_within: 5 minutes
