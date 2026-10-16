@@ -1,3 +1,4 @@
+
 ---
 - name: Monitor Apache HTTP availability
   hosts: all
@@ -9,6 +10,18 @@
         delay: 15
 
   rules:
+    - name: Apache is healthy
+      condition: event.url_check.status == "up"
+      action:
+        debug:
+          msg: "RHEL 10 | Apache | UP | HTTP service available"
+
+    - name: Apache outage detected
+      condition: event.url_check.status == "down"
+      action:
+        debug:
+          msg: "RHEL 10 | Apache | DOWN | HTTP service unavailable"
+
     - name: Apache automatic remediation
       condition: event.url_check.status == "down"
       throttle:
