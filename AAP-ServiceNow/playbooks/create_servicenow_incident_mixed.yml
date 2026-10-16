@@ -1,0 +1,66 @@
+
+---
+- name: Create ServiceNow incident for failed web service
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    sn_host: "{{ lookup('env', 'SN_HOST') }}"
+    sn_username: "{{ lookup('env', 'SN_USERNAME') }}"
+    sn_password: "{{ lookup('env', 'SN_PASSWORD') }}"
+
+  tasks:
+    - name: Validate ServiceNow credentials
+      ansible.builtin.assert:
+        that:
+          - sn_host is match('^https?://')
+          - sn_username | length > 0
+          - sn_password | length > 0
+        fail_msg: "ServiceNow credentials are missing."
+      no_log: true
+
+    - name: Validate incident details
+      ansible.builtin.assert:
+        that:
+          - incident_os is defined
+          - incident_service is defined
+          - incident_host is defined
+        fail_msg: "Missing incident details."
+
+    - name: Create ServiceNow incident
+      servicenow.itsm.incident:
+        instance:
+          host: "{{ sn_host }}"
+          username: "{{ sn_username }}"
+          password: "{{ sn_password }}"
+        state: new
+        caller: "{{ sn_username }}"
+        short_description: >-
+          {{ incident_os }} {{ incident_service }} service failure detected
+        description: >-
+          Event-Driven Ansible detected an HTTP service outage.
+
+          Operating System: {{ incident_os }}
+          Host: {{ incident_host }}
+          Service: {{ incident_service }}
+
+          Red Hat Ansible Automation Platform has initiated
+          an automated remediation workflow.
+        impact: medium
+        urgency: medium
+      register: servicenow_incident
+      no_log: true
+
+    - name: Display created incident
+      ansible.builtin.debug:
+        msg:
+          - "Incident: {{ servicenow_incident.record.number }}"
+          - "Host: {{ incident_host }}"
+          - "Service: {{ incident_service }}"
+
+    - name: Publish incident for downstream workflow jobs
+      ansible.builtin.set_stats:
+        data:
+          servicenow_incident_number: "{{ servicenow_incident.record.number }}"
+          servicenow_incident_sys_id: "{{ servicenow_incident.record.sys_id }}"
