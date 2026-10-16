@@ -18,7 +18,7 @@
           - event.url_check.url
       action:
         run_workflow_template:
-          name: "EDA RHEL ServiceNow Remediation (SN) - JULIAN"
+          name: "EDA RHEL ServiceNow Mixed Remediation (SN) - JULIAN"
           organization: "JULIAN"
 
 - name: Monitor Windows IIS HTTP availability
@@ -39,5 +39,5 @@
           - event.url_check.url
       action:
         run_workflow_template:
-          name: "EDA Windows ServiceNow Remediation (SN) - JULIAN"
+          name: "EDA RHEL ServiceNow Mixed Remediation (SN) - JULIAN"
           organization: "JULIAN"
