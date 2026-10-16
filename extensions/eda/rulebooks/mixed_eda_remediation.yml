@@ -27,8 +27,9 @@
         debug:
           msg: "Windows Server 2022 | IIS | UP"
 
-    - name: Test outage detection
+    - name: Apache or IIS DOWN - Trigger Remediation
       condition: event.url_check.status == "down"
       action:
-        debug:
-          msg: "OUTAGE DETECTED | {{ event.url_check.url }} | DOWN"
+        run_workflow_template:
+          name: "EDA RHEL ServiceNow Mixed Remediation (SN) - JULIAN"
+          organization: "JULIAN"
