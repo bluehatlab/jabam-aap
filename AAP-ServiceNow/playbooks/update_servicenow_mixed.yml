@@ -1,0 +1,51 @@
+
+---
+- name: Update ServiceNow incident after remediation
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    sn_host: "{{ lookup('env', 'SN_HOST') }}"
+    sn_username: "{{ lookup('env', 'SN_USERNAME') }}"
+    sn_password: "{{ lookup('env', 'SN_PASSWORD') }}"
+
+  tasks:
+    - name: Validate incident information
+      ansible.builtin.assert:
+        that:
+          - servicenow_incident_number is defined
+          - servicenow_incident_number | length > 0
+          - incident_os is defined
+          - incident_service is defined
+          - incident_host is defined
+        fail_msg: >-
+          Missing incident details or ServiceNow incident number.
+          Cannot safely update the existing ticket.
+
+    - name: Resolve existing ServiceNow incident
+      servicenow.itsm.incident:
+        instance:
+          host: "{{ sn_host }}"
+          username: "{{ sn_username }}"
+          password: "{{ sn_password }}"
+        number: "{{ servicenow_incident_number }}"
+        state: resolved
+        close_code: "Solved (Permanently)"
+        close_notes: >-
+          Automated remediation completed successfully.
+          Operating System: {{ incident_os }}.
+          Host: {{ incident_host }}.
+          Service: {{ incident_service }}.
+          The web service has been restored and HTTP 200
+          was confirmed by Ansible Automation Platform.
+      register: updated_incident
+      no_log: true
+
+    - name: Report incident resolution
+      ansible.builtin.debug:
+        msg:
+          - "Incident: {{ servicenow_incident_number }}"
+          - "Status: Resolved"
+          - "Host: {{ incident_host }}"
+          - "Service: {{ incident_service }}"
