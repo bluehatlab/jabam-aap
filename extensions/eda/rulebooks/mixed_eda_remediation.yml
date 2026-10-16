@@ -48,10 +48,6 @@
         all:
           - event.url_check.status == "down" and event.url_check.url == "http://3.80.122.153/"
           - event.url_check.status == "down" and event.url_check.url == "http://32.198.25.88/"
-      throttle:
-        once_within: 5 minutes
-        group_by_attributes:
-          - event.url_check.url
       action:
         run_workflow_template:
           name: "EDA RHEL ServiceNow Mixed Remediation (SN) - JULIAN"
