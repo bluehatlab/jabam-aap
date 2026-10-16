@@ -25,7 +25,7 @@
     - name: Apache automatic remediation
       condition: event.url_check.status == "down"
       throttle:
-        once_within: 5 minutes
+        once_within: 5 seconds
         group_by_attributes:
           - event.url_check.url
       action:
